@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89a5411cc9e8f954c86b8e074416ca46, type: 3}
+  m_Name: crush_quartz
+  m_EditorClassIdentifier: 
+  recipeId: crush_quartz
+  displayName: "\uC11D\uC601 \uBD84\uC1C4"
+  machineType: 2
+  craftingTime: 4
+  inputs:
+  - item: {fileID: 11400000, guid: 1041bd835dd11fa448a118e97f6bf526, type: 2}
+    amount: 3
+  output: {fileID: 11400000, guid: c8bf49e5d0f112d4d8929b4c76527bd6, type: 2}
+  outputAmount: 5

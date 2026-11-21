@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89a5411cc9e8f954c86b8e074416ca46, type: 3}
+  m_Name: make_control_module
+  m_EditorClassIdentifier: 
+  recipeId: make_control_module
+  displayName: "\uC81C\uC5B4 \uBAA8\uB4C8 \uC81C\uC791"
+  machineType: 3
+  craftingTime: 4
+  inputs:
+  - item: {fileID: 11400000, guid: 480292b9c02334f4494a84ce6ee335a5, type: 2}
+    amount: 1
+  - item: {fileID: 11400000, guid: 7e1acb94c3ddb7d4a923b2f0bd585c7c, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 252351b120d3d034fbb98f5e9c3f12b8, type: 2}
+    amount: 1
+  output: {fileID: 11400000, guid: 516058db5389617498d7d20e36060ce8, type: 2}
+  outputAmount: 1

@@ -1,0 +1,11 @@
+﻿# resource_nodes.csv — 자원 노드 정의 (DataImporter > ⛏️ 자원노드 임포트)
+# 열: id / item_id(채굴 산출 아이템) / purity(IMPURE,NORMAL,PURE) / base_output_per_min
+# 중요: id는 HardcodedOreTable의 광물 id와 반드시 일치해야 함.
+#       월드 생성기가 world.bin에 nodeDataId = 광물 id를 그대로 기록하므로(ChunkGenerator:102),
+#       이 id가 어긋나면 노드 스폰 구현 시 SO 역조회가 실패함. purity는 기본 순도(생성 시 승급/강등됨)
+id,item_id,purity,base_output_per_min
+iron_ore,iron_ore,NORMAL,60
+copper_ore,copper_ore,NORMAL,60
+coal,coal,NORMAL,60
+quartz,quartz,IMPURE,45
+uranium,uranium,PURE,30

@@ -1,0 +1,21 @@
+﻿# items.csv — 아이템 정의 (DataImporter > 📦 아이템 임포트)
+# 열: id(필수, 에셋 파일명이 됨) / name_kr / category(RAW,MATERIAL,COMPONENT,FUEL) / stack_size(정수)
+# 비고: icon(Sprite)은 CSV 대상이 아님 — 인스펙터에서 수동 지정, 재임포트해도 유지됨
+id,name_kr,category,stack_size
+iron_ore,철광석,RAW,100
+copper_ore,구리광석,RAW,100
+coal,석탄,RAW,100
+quartz,석영,RAW,100
+uranium,우라늄,RAW,50
+iron_ingot,철 주괴,MATERIAL,100
+copper_ingot,구리 주괴,MATERIAL,100
+steel_ingot,강철 주괴,MATERIAL,100
+silica,실리카,MATERIAL,100
+iron_plate,철판,COMPONENT,200
+iron_rod,철봉,COMPONENT,200
+screw,나사,COMPONENT,500
+wire,전선,COMPONENT,500
+cable,케이블,COMPONENT,200
+reinforced_plate,보강 철판,COMPONENT,100
+circuit_board,회로기판,COMPONENT,100
+control_module,제어 모듈,COMPONENT,50

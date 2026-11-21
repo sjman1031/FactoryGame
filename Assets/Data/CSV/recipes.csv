@@ -1,0 +1,18 @@
+﻿# recipes.csv — 레시피 정의 (DataImporter > 🔧 레시피 임포트),,,,,,,,,,,,,
+# 열: id / display_name / machine_type(HAND,SMELTER,CONSTRUCTOR,MANUFACTURER,ASSEMBLER) / craft_time(초),,,,,,,,,
+#     input1~4: (id, amount) 쌍 — 반드시 input1부터 연속으로. 빈 칸을 만나면 그 뒤는 읽지 않음,,,,,,,,,,,,
+#     output_id / output_amount,,,,,,,,,,,,,
+# 비고: 아이템 임포트가 먼저 완료되어 있어야 함 (SO 파일을 참조하므로),,,,,,,,,,,,,
+id,display_name,machine_type,craft_time,input1_id,input1_amount,input2_id,input2_amount,input3_id,input3_amount,input4_id,input4_amount,output_id,output_amount
+smelt_iron,철 주괴 제련,SMELTER,2,iron_ore,1,,,,,,,iron_ingot,1
+smelt_copper,구리 주괴 제련,SMELTER,2,copper_ore,1,,,,,,,copper_ingot,1
+smelt_steel,강철 제련,SMELTER,4,iron_ore,3,coal,3,,,,,steel_ingot,3
+crush_quartz,석영 분쇄,CONSTRUCTOR,4,quartz,3,,,,,,,silica,5
+make_iron_plate,철판 제작,CONSTRUCTOR,4,iron_ingot,3,,,,,,,iron_plate,2
+make_iron_rod,철봉 제작,CONSTRUCTOR,3,iron_ingot,1,,,,,,,iron_rod,1
+make_screw,나사 제작,CONSTRUCTOR,3,iron_rod,1,,,,,,,screw,4
+make_wire,전선 제작,CONSTRUCTOR,3,copper_ingot,1,,,,,,,wire,2
+make_cable,케이블 제작,CONSTRUCTOR,2,wire,2,,,,,,,cable,1
+make_reinforced_plate,보강 철판 조립,ASSEMBLER,8,iron_plate,6,screw,12,,,,,reinforced_plate,1
+make_circuit_board,회로기판 조립,ASSEMBLER,6,wire,4,silica,2,,,,,circuit_board,1
+make_control_module,제어 모듈 제작,MANUFACTURER,12,circuit_board,1,cable,2,reinforced_plate,1,,,control_module,1
