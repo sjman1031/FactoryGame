@@ -1,21 +1,17 @@
 using UnityEngine;
 
-public enum ItemCategory { NONE, MATERIAL, COMPONENT, FUEL }
+public enum ItemCategory { Raw, Material, Component, Fuel }
 
-/// <summary>
-/// °ÔÀÓ ³» ¸ğµç ¾ÆÀÌÅÛÀÇ ¿øÇü µ¥ÀÌÅÍ
-/// InventoryÀÇ Å°·Î »ç¿ëµÇ¹Ç·Î ScriptableObject·Î ±¸Çö
-/// </summary>
-[CreateAssetMenu(fileName ="New Item", menuName = "Game Data/Item")]
+/// <summary>ì•„ì´í…œ ì •ì˜. DataImporterê°€ items.csvë¡œ ë§Œë“ ë‹¤.</summary>
+[CreateAssetMenu(fileName = "New Item", menuName = "Game Data/Item")]
 public class ItemData : ScriptableObject
 {
-    [Header("±âº» Á¤º¸")]
+    [Header("ê¸°ë³¸ ì •ë³´")]
     public string       itemId;
     public string       displayName;
     public ItemCategory category;
     public int          stackSize = 50;
 
-    [Header("ºñÁÖ¾ó")]
+    [Header("ë¹„ì£¼ì–¼")]
     public Sprite       icon;
-    public GameObject   worldPrefab;
 }

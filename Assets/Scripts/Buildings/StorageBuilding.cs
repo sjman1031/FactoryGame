@@ -1,40 +1,54 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// ¾ÆÀÌÅÛÀ» º¸°üÇÏ´Â Ã¢°í. ÆĞ½Ãºê °Ç¹° - Tick()¿¡ Ã³¸® ¾øÀ½
-/// ÄÁº£ÀÌ¾î°¡ ³Ö°í ²¨³¾ ¼ö ÀÖ°í, ÇÃ·¹ÀÌ¾î°¡ Á÷Á¢ ¿­¶÷µµ °¡´É
-/// </summary>
+/// <summary>ì•„ì´í…œì„ ë³´ê´€í•˜ëŠ” ì°½ê³ . íŒ¨ì‹œë¸Œ ê±´ë¬¼.</summary>
 public class StorageBuilding : BuildingBase, IItemInput, IItemOutput
 {
     [SerializeField] private int _slotCount = 20;
-
     public Inventory Storage { get; private set; }
+
+    // Deserialize(Instantiate ì§í›„)ì™€ ì´ì›ƒ ë²¨íŠ¸ì˜ ì²« ë°°ë‹¬(Startë³´ë‹¤ ë¨¼ì € ì˜¬ ìˆ˜ ìˆìŒ)ë³´ë‹¤
+    // ì•ì„œ ìˆì–´ì•¼ í•˜ë¯€ë¡œ Awakeì—ì„œ ë§Œë“ ë‹¤.
+    protected override void Awake()
+    {
+        base.Awake();
+        Storage = new Inventory(_slotCount);
+    }
 
     public override void OnBuildingPlaced()
     {
-        Storage = new Inventory(_slotCount);
-        // TODO: Storage.OnChanged += () => { /* UI °»½Å µî */ };
+        // TODO: Storage.OnChanged += UI ê°±ì‹ 
     }
 
-    // ÆĞ½Ãºê °Ç¹° - ÁÖ±â Ã³¸® ¾øÀ½
     public override void Tick(float deltaTime) { }
 
-    // IItemInput - ÄÁº£ÀÌ¾î°¡ ¾ÆÀÌÅÛÀ» ³ÖÀ» ¶§
     public bool TryInputItem(ItemData item) => Storage.TryAdd(item, 1);
 
-    // IItemOutput - ÄÁº£ÀÌ¾î°¡ ¾ÆÀÌÅÛÀ» ²¨³¾ ¶§
     public bool TryOutputItem(out ItemData item)
     {
         foreach (var kv in Storage.GetAll())
         {
-            if (kv.Value <= 0) continue; // ºó ½½·Ô
+            if (kv.Value <= 0) continue;
             item = kv.Key;
             Storage.TryRemove(item, 1);
             return true;
         }
-
-        item = null;
-        return false; // º¸°üÇÔÀÌ ºñ¾îÀÖÀ½
+        item = null; return false;
     }
 
+    public override BuildingSaveData Serialize()
+    {
+        var data = base.Serialize();
+        InventorySaveUtil.Write(Storage, _unresolved, data.items);
+        return data;
+    }
+
+    // ë¶ˆëŸ¬ì˜¬ ë•Œ idë¥¼ ì°¾ì§€ ëª»í–ˆê±°ë‚˜ ìë¦¬ê°€ ì—†ì–´ ëª» ë„£ì€ í•­ëª©. ë²„ë¦¬ì§€ ì•Šê³  ë‹¤ìŒ ì €ì¥ì— ê·¸ëŒ€ë¡œ ë‹¤ì‹œ ì“´ë‹¤.
+    private List<InventoryEntry> _unresolved;
+
+    public override void Deserialize(BuildingSaveData data)
+    {
+        base.Deserialize(data);
+        _unresolved = InventorySaveUtil.Restore(Storage, data.items, this);
+    }
 }

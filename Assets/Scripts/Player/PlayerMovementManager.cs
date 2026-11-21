@@ -1,106 +1,107 @@
 using UnityEngine;
 
-/// <summary>
-/// CC.Move()¸¦ È£ÃâÇÏ´Â À¯ÀÏÇÑ ÁöÁ¡
-/// FixedUpdate¿¡¼­ ÀÔ·Â -> »óÅÂ -> ¼öÆòÀÌµ¿ -> ¼öÁ÷¼Óµµ -> ÀÌµ¿ Àû¿ë ¼øÀ¸·Î Ã³¸®
-/// </summary>
+// â”€â”€ ì´ë™ ìˆ˜ì¹˜ (ì¸ìŠ¤í™í„°ì—ì„œ í¸ì§‘) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/// <summary>ì´ë™Â·ì í”„Â·ì¹´ë©”ë¼ ìˆ˜ì¹˜. PlayerMovementManager ì¸ìŠ¤í™í„°ì—ì„œ í¸ì§‘í•œë‹¤.</summary>
+[System.Serializable]
+public class MovementConfig
+{
+    [Header("ì†ë„")]
+    public float walkSpeed        = 8f;
+    public float sprintSpeed      = 16f;
+    public float airControl       = 0.4f;
+
+    [Header("ì í”„ / ì¤‘ë ¥")]
+    public float jumpHeight       = 3f;
+    public float gravity          = -25f;
+
+    [Header("ì¹´ë©”ë¼")]
+    public float mouseSensitivity = 2f;
+    public float pitchMin         = -80f;
+    public float pitchMax         =  80f;
+}
+
+/// <summary>CC.Move()ë¥¼ í˜¸ì¶œí•˜ëŠ” ìœ ì¼í•œ ì§€ì .</summary>
 public class PlayerMovementManager : SingletonManager<PlayerMovementManager>
 {
     [SerializeField] private MovementConfig _config = new();
 
-    private PlayerController    _controller;
-    private PlayerStateManager  _stateManager;
-    private Vector3             _velocity;      // ¼öÁ÷ ¼Óµµ ´©Àû (Áß·Â + Á¡ÇÁ)
-    private float               _pitch;         // Ä«¸Ş¶ó »óÇÏ °¢µµ
+    private PlayerController   _controller;
+    private PlayerStateManager _stateManager;
+    private Vector3            _velocity;
+    private float              _pitch;
 
-    // ÃÊ±âÈ­
-    protected override void OnInit()
+    protected override void OnInitialize()
     {
         _stateManager = new PlayerStateManager();
         _stateManager.OnStateChanged += OnStateChanged;
-
         Cursor.lockState = CursorLockMode.Locked;
     }
 
     public void Register(PlayerController controller)
+        => _controller = controller;
+
+    /// <summary>ë“±ë¡ëœ ë³¸ì¸ì¼ ë•Œë§Œ í•´ì œí•œë‹¤ â€” ìƒˆ í”Œë ˆì´ì–´ê°€ ë¨¼ì € ë“±ë¡ëœ ë’¤ ì´ì „ í”Œë ˆì´ì–´ê°€ íŒŒê´´ë¼ë„ ì§€ì›Œì§€ì§€ ì•Šê²Œ.</summary>
+    public void Unregister(PlayerController controller)
     {
-        _controller = controller;
+        if (_controller == controller) _controller = null;
     }
 
-    // ¸Å ¹°¸® ÇÁ·¹ÀÓ
+    // [ìµœì í™”] ì¹´ë©”ë¼ íšŒì „(HandleLook)ì„ FixedUpdateì—ì„œ Updateë¡œ ì´ë™.
+    // FixedUpdateëŠ” ë¬¼ë¦¬ í”„ë ˆì„(ê¸°ë³¸ 50Hz)ì—ì„œ ì‹¤í–‰ë˜ëŠ”ë°,
+    // ì¹´ë©”ë¼ íšŒì „ì„ ì—¬ê¸°ì„œ ì²˜ë¦¬í•˜ë©´ ëª¨ë‹ˆí„° ì£¼ì‚¬ìœ¨(60~144Hz)ê³¼ ì–´ê¸‹ë‚˜
+    // í™”ë©´ì´ ëŠê²¨ ë³´ì´ëŠ” í˜„ìƒ(jitter)ì´ ë°œìƒí•œë‹¤.
+    // ì¹´ë©”ë¼ì²˜ëŸ¼ ì‹œê°ì  ë°˜ì‘ì´ ì¤‘ìš”í•œ ê±´ ë Œë” í”„ë ˆì„ê³¼ ë™ê¸°í™”ë˜ëŠ” Updateì—ì„œ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+    private void Update()
+    {
+        if (_controller == null) return;
+        HandleLook(InputManager.Instance.Current);
+    }
+
     private void FixedUpdate()
     {
         if (_controller == null) return;
 
-        InputData input     = InputManager.Instance.current;
-        bool      grounded  = _controller.CC.isGrounded;
+        InputData   input    = InputManager.Instance.Current;
+        // ì í”„ëŠ” Updateì—ì„œ ë˜ì¹˜ëœ ê°’ì„ ì—¬ê¸°ì„œ í•œ ë²ˆë§Œ êº¼ë‚¸ë‹¤ â€” ë¬¼ë¦¬ í”„ë ˆì„ì´ ì—†ëŠ” ë Œë” í”„ë ˆì„ì— ëˆŒëŸ¬ë„ ì‚¬ë¼ì§€ì§€ ì•Šê²Œ
+        input.jumpPressed    = InputManager.Instance.ConsumeJump();
+        bool        grounded = _controller.CC.isGrounded;
+        PlayerState state    = _stateManager.Evaluate(input, grounded, _velocity);
 
-        // 1. »óÅÂ °»½Å - »óÅÂ°¡ ¹Ù²î¸é OnStateChanged ÀÌº¥Æ® ¹ß»ı
-        PlayerState state = _stateManager.Evaluate(input, grounded, _velocity);
-
-        // 2. Ä«¸Ş¶ó È¸Àü (Look)
-        HandleLook(input);
-
-        // 3. ¼öÆò ÀÌµ¿·® °è»ê
         Vector3 move = CalcHorizontal(input, state);
-
-        // 4. ¼öÁ÷ ¼Óµµ °è»ê (Áß·Â + Á¡ÇÁ)
         CalcVertical(input, grounded);
 
-        // 5. ÀÌµ¿ Àû¿ë
         _controller.CC.Move((move + _velocity) * Time.fixedDeltaTime);
     }
 
-    // Ä«¸Ş¶ó »óÇÏ È¸Àü
     private void HandleLook(InputData input)
     {
-        // ÁÂ¿ì: ÇÃ·¹ÀÌ¾î ¿ÀºêÁ§Æ® ÀÚÃ¼¸¦ YÃà È¸Àü
         _controller.transform.Rotate(0f, input.lookAxis.x * _config.mouseSensitivity, 0f);
-
-        // »óÇÏ: Ä«¸Ş¶ó ¾Ï¸¸ XÃà È¸Àü (È¸Àü ¹üÀ§ Á¦ÇÑ)
         _pitch = Mathf.Clamp(
             _pitch - input.lookAxis.y * _config.mouseSensitivity,
-            _config.pitchMin, 
-            _config.pitchMax
-            );      
+            _config.pitchMin, _config.pitchMax);
         _controller.CameraArm.localEulerAngles = new Vector3(_pitch, 0f, 0f);
     }
 
-    // ¼öÆò ÀÌµ¿
     private Vector3 CalcHorizontal(InputData input, PlayerState state)
     {
-        float speed = (state == PlayerState.Sprint)
-            ? _config.sprintSpeed
-            : _config.walkSpeed;
-
-        // °øÁßÀÌ¸é ÄÁÆ®·Ñ °¨¼è
-        bool airborne = state is PlayerState.Jump or PlayerState.Fall;
-        if (airborne) speed *= _config.airControl;
+        float speed = state == PlayerState.Sprint ? _config.sprintSpeed : _config.walkSpeed;
+        if (state is PlayerState.Jump or PlayerState.Fall) speed *= _config.airControl;
 
         Transform t = _controller.transform;
-        Vector3   dir = t.right   * input.moveAxis.x 
-                      + t.forward * input.moveAxis.y;
-
-        return dir.normalized * speed;
+        return (t.right * input.moveAxis.x + t.forward * input.moveAxis.y).normalized * speed;
     }
 
-    // ¼öÁ÷ ¼Óµµ °è»ê
     private void CalcVertical(InputData input, bool grounded)
     {
-        // ¹Ù´Ú¿¡ ºÙÀÌ´Â ÃÖ¼Ò°ª 
-        if (grounded && _velocity.y < 0f) 
-            _velocity.y = -2f;
-
+        if (grounded && _velocity.y < 0f) _velocity.y = -2f;
         if (input.jumpPressed && grounded)
-            _velocity.y = Mathf.Sqrt(_config.jumpForce * -2f * _config.gravity);
-
+            _velocity.y = Mathf.Sqrt(_config.jumpHeight * -2f * _config.gravity);
         _velocity.y += _config.gravity * Time.fixedDeltaTime;
     }
 
-    // »óÅÂ º¯°æ ÀÌº¥Æ®
     private void OnStateChanged(PlayerState from, PlayerState to)
     {
-        // Todo -> Audio, Animation µî »óÅÂ º¯°æ¿¡ µû¸¥ È¿°ú Ã³¸®
-        Debug.Log($"State changed: {from} -> {to}");
+        // TODO: AudioManager.Instance.OnMovementState(to);
+        Debug.Log($"[PlayerMovementManager] {from} â†’ {to}");
     }
 }

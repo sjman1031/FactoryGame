@@ -1,26 +1,20 @@
 using UnityEngine;
 
-/// <summary>
-/// ¾À¿¡ ¹èÄ¡µÇ´Â ÀÚ¿ø ³ëµå ¿ÀºêÁ§Æ®
-/// µ¥ÀÌÅÍ´Â ResourceNodeData ¿¡¼­ ÂüÁ¶ - ÀÌ ÄÄÇÁ³ÍÆ®´Â À§Ä¡ Á¤º¸¸¸ ´ã´ç
-/// </summary>
+/// <summary>ì”¬ì— ë°°ì¹˜ë˜ëŠ” ìžì› ë…¸ë“œ ì˜¤ë¸Œì íŠ¸. ë°ì´í„°ëŠ” SOì—ì„œ ì°¸ì¡°.</summary>
 public class ResourceNodeBehaviour : MonoBehaviour
 {
     public ResourceNodeData nodeData;
 
-    // Scene ºä¿¡¼­ ³ëµåÀÇ ¹üÀ§¸¦ ½Ã°¢È­ÇÏ±â À§ÇÑ Gizmos
     private void OnDrawGizmos()
     {
         if (nodeData == null) return;
-
         Gizmos.color = nodeData.purity switch
         {
-            NodePurity.PURE   => Color.blue,
-            NodePurity.NORMAL => Color.yellow,
-            NodePurity.IMPURE => Color.red,
+            NodePurity.Pure   => Color.blue,
+            NodePurity.Normal => Color.yellow,
+            NodePurity.Impure => Color.red,
             _                 => Color.white
         };
-
         Gizmos.DrawWireSphere(transform.position, 1.5f);
     }
 }

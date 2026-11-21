@@ -1,49 +1,41 @@
+using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public enum MachineType { HAND, SMELTER, CONSTRUCTOR, MANUFACTURER, ASSEMBLER }
+public enum MachineType { Hand, Smelter, Constructor, Manufacturer, Assembler }
 
-/// <summary>
-/// Àç·á + ¼ö·® 
-/// RecipeData ¾È¿¡¼­¸¸ »ç¿ë
-/// </summary>
-[System.Serializable]
+/// <summary>ë ˆì‹œí”¼ ì •ì˜. DataImporterê°€ recipes.csvë¡œ ë§Œë“ ë‹¤.</summary>
+[CreateAssetMenu(fileName = "New Recipe", menuName = "Game Data/Recipe")]
+public class RecipeData : ScriptableObject
+{
+    [Header("ê¸°ë³¸ ì •ë³´")]
+    public string      recipeId;
+    public string      displayName;
+    public MachineType machineType;
+    // ì´ì „ ì´ë¦„ craftingTimeìœ¼ë¡œ ì €ì¥ëœ ì—ì…‹ë„ ê·¸ëŒ€ë¡œ ì½ëŠ”ë‹¤
+    [FormerlySerializedAs("craftingTime")]
+    public float       craftTime = 4f;
+
+    [Header("ì¬ë£Œ (ìµœëŒ€ 4ê°œ)")]
+    public RecipeIngredient[] inputs = Array.Empty<RecipeIngredient>();
+
+    [Header("ê²°ê³¼ë¬¼")]
+    public ItemData output;
+    public int      outputAmount = 1;
+
+    public bool CanCraft(Inventory inventory)
+    {
+        foreach (var ing in inputs)
+            if (inventory.GetAmount(ing.item) < ing.amount) return false;
+        return true;
+    }
+}
+
+// â”€â”€ RecipeIngredient (RecipeData.inputs ì›ì†Œ) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/// <summary>ë ˆì‹œí”¼ ì¬ë£Œ í•˜ë‚˜ (ì•„ì´í…œ + ìˆ˜ëŸ‰).</summary>
+[Serializable]
 public class RecipeIngredient
 {
     public ItemData item;
     public int      amount;
-}
-
-/// <summary>
-/// Àç·á -> °á°ú
-/// CanCraft()·Î ÀÎº¥Åä¸® ÃæÁ· ¿©ºÎ¸¦ Á÷Á¢ È®ÀÎ
-/// </summary>
-[CreateAssetMenu(fileName = "New Recipe", menuName = "Game Data/Recipe")]
-public class RecipeData : ScriptableObject
-{
-    [Header("±âº» Á¤º¸")]
-    public string      recipeId;
-    public string      displayName; 
-    public MachineType machineType;
-    public float       craftingTime = 4f; // ÃÊ ´ÜÀ§
-
-    [Header("Àç·á (ÃÖ´ë 4°³)")]
-    public RecipeIngredient[] inputs = new RecipeIngredient[0];
-
-    [Header("°á°ú¹°")]
-    public ItemData output;
-    public int      outputAmount = 1;
-
-    /// <summary>
-    /// ÀÎº¥Åä¸®¿¡ Àç·á°¡ ÃæºĞÇÑÁö È®ÀÎ
-    /// </summary>
-    public bool CanCraft(Inventory inventory)
-    {
-        foreach (var ingredient in inputs)
-        {
-            if (inventory.GetAmount(ingredient.item) < ingredient.amount)
-                return false;
-        }
-
-        return true;
-    }
 }

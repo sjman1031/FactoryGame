@@ -1,29 +1,24 @@
 using UnityEngine;
 
-/// <summary>
-/// µ¥ÀÌÅÍ º¸À¯¸¸ ÇÏ´Â Å¬·¡½º
-/// ÀÌµ¿ °ü·Ã ·ÎÁ÷ ¾øÀ½
-/// </summary>
+/// <summary>ë°ì´í„° ë³´ìœ ë§Œ. ì´ë™ ë¡œì§ ì—†ìŒ.</summary>
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-    public CharacterController CC { get; private set; }
+    public CharacterController CC              { get; private set; }
     public Inventory           PlayerInventory { get; } = new(20);
 
-    [Header("Ä«¸Ş¶ó ¾Ï - Ä«¸Ş¶ó¸¦ ÀÚ½ÄÀ¸·Î µÎ´Â ºó ¿ÀºêÁ§Æ® ¿¬°á")]
     [SerializeField] private Transform _cameraArm;
     public Transform CameraArm => _cameraArm;
 
-    private void Awake()
-        => CC = GetComponent<CharacterController>();
+    private void Awake() => CC = GetComponent<CharacterController>();
 
-
-    // Awake ¼ø¼­ º¸ÀåÀ» À§ÇØ Start¿¡¼­ µî·Ï
     private void Start()
-       =>  PlayerMovementManager.Instance.Register(this);
+        => PlayerMovementManager.Instance.Register(this);
 
-
-    public void OnDestroy()
-        => PlayerMovementManager.Instance?.Register(null);
-
-}   
+    private void OnDestroy()
+    {
+        // ?.ëŠ” Unityì˜ íŒŒê´´ ê²€ì‚¬ë¥¼ ê±´ë„ˆë›°ë¯€ë¡œ == nullë¡œ í™•ì¸í•œë‹¤
+        var manager = PlayerMovementManager.Instance;
+        if (manager != null) manager.Unregister(this);
+    }
+}

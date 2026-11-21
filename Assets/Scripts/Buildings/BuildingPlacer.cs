@@ -1,121 +1,114 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-/// <summary>
-/// ¸¶¿ì½º ±â¹İ °Ç¹° ¹èÄ¡ ½Ã½ºÅÛ.
-/// ±×¸®µå ½º³À + Ãæµ¹ Ã¼Å© + ÇÁ¸®ºä Ç¥½Ã
-/// </summary>
+/// <summary>ë§ˆìš°ìŠ¤ ê¸°ë°˜ ê±´ë¬¼ ë°°ì¹˜. ê·¸ë¦¬ë“œ ìŠ¤ëƒ… + ì¶©ëŒ ì²´í¬ + í”„ë¦¬ë·°. Rë¡œ 90Â° íšŒì „.</summary>
 public class BuildingPlacer : MonoBehaviour
 {
-    [Header("·¹ÀÌ¾î ¼³Á¤")]
+    [Header("ë ˆì´ì–´")]
     public LayerMask groundLayer;
     public LayerMask buildingLayer;
 
-    [Header("ÇÁ¸®ºä ¸ÅÅÍ¸®¾ó")]
+    [Header("í”„ë¦¬ë·° ë¨¸í‹°ë¦¬ì–¼")]
     public Material previewValidMat;
     public Material previewInvalidMat;
 
-    [Header("±×¸®µå")]
+    [Header("ê·¸ë¦¬ë“œ")]
     public float gridSize = 1f;
 
     private BuildingBase _currentPrefab;
     private GameObject   _previewGO;
     private bool         _isPlacing;
+    private Quaternion   _rotation = Quaternion.identity;
 
-    // ¿ÜºÎ ÁøÀÔÁ¡
-    /// <summary> UI ¹öÆ°¿¡¼­ ¹èÄ¡ ¸ğµå ½ÃÀÛ ½Ã È£Ãâ.
+    private readonly List<(string oreId, float probability)> _oreBuffer = new();
+
     public void BeginPlace(BuildingBase prefab)
     {
         CancelPlace();
-
         _currentPrefab = prefab;
         _isPlacing     = true;
         _previewGO     = Instantiate(prefab.gameObject);
-
-        // ÇÁ¸®ºä´Â Ãæµ¹ Ã³¸® ¾øÀ½
         foreach (var col in _previewGO.GetComponentsInChildren<Collider>())
             col.enabled = false;
+        // í”„ë¦¬ë·°ëŠ” ë³´ì´ê¸°ë§Œ í•´ì•¼ í•œë‹¤. ê±´ë¬¼ ìŠ¤í¬ë¦½íŠ¸ë¥¼ êº¼ ë‘ë©´ Startê°€ ëŒì§€ ì•Šì•„
+        // TickManagerÂ·BuildingRegistryì— ë“±ë¡ë˜ì§€ ì•Šê³  ì €ì¥ ëŒ€ìƒì—ë„ ë“¤ì–´ê°€ì§€ ì•ŠëŠ”ë‹¤.
+        foreach (var building in _previewGO.GetComponentsInChildren<BuildingBase>())
+            building.enabled = false;
     }
 
     public void CancelPlace()
     {
         if (_previewGO != null) Destroy(_previewGO);
-        _isPlacing = true;
+        _isPlacing = false;
     }
 
-    // ¸Å ÇÁ·¹ÀÓ
     private void Update()
     {
         if (!_isPlacing) return;
         if (Input.GetKeyDown(KeyCode.Escape)) { CancelPlace(); return; }
+        if (Input.GetKeyDown(KeyCode.R)) _rotation *= Quaternion.Euler(0f, 90f, 0f);
         if (!TryGetGroundPoint(out Vector3 pos)) return;
 
         Vector3 snapped = Snap(pos);
-        _previewGO.transform.position = snapped;
+        _previewGO.transform.SetPositionAndRotation(snapped, _rotation);
+        // ì±„êµ´ê¸°ëŠ” ê´‘ë§¥ì´ ìˆëŠ” ì¹¸ì—ë§Œ â€” ê´‘ë§¥ì€ í™”ë©´ì— ë³´ì´ì§€ ì•Šìœ¼ë¯€ë¡œ í”„ë¦¬ë·° ìƒ‰ì´ íƒì§€ê¸° ì—­í• ì„ í•œë‹¤
+        bool canPlace = CanPlace(snapped) && (!(_currentPrefab is MinerBuilding) || HasOre(snapped));
+        SetPreviewMaterial(canPlace ? previewValidMat : previewInvalidMat);
 
-        bool canPlace = CanPlace(snapped);
-        SetPreviewMaterial(canPlace ? previewValidMat : previewInvalidMat); 
-
-        if (canPlace && Input.GetMouseButtonDown(0))
-            PlaceBuilding(snapped);
+        if (canPlace && Input.GetMouseButtonDown(0)) PlaceBuilding(snapped);
     }
 
-    // ³»ºÎ Ã³¸®
     private void PlaceBuilding(Vector3 pos)
     {
-        var placed = Instantiate(_currentPrefab, pos, Quaternion.identity);
-        placed.gameObject.layer = LayerMask.NameToLayer("Building");
-
-        // Ã¤±¼±â¸é ±ÙÃ³ ³ëµå ÀÚµ¿ ¿¬°á
-        if (placed is MinerBuilding miner)
-            TryConnectMinerToNode(miner);
-
-        // TODO: °Ç¼³ Àç·á »©±â
-
+        var placed = Instantiate(_currentPrefab, pos, _rotation);
+        // ë ˆì´ì–´ëŠ” BuildingBase.Awakeì—ì„œ ìì‹ê¹Œì§€ Buildingìœ¼ë¡œ ì •í•œë‹¤
+        if (placed is MinerBuilding)
+            Debug.Log("[BuildingPlacer] ì±„êµ´ê¸° ë°°ì¹˜ â€” " +
+                      string.Join(", ", _oreBuffer.Select(o => $"{o.oreId} {o.probability:P0}")));
+        ReconnectBelts(placed, pos);
+        // TODO: ê±´ì„¤ ë¹„ìš© ì°¨ê°
         CancelPlace();
     }
 
-    private void TryConnectMinerToNode(MinerBuilding miner)
+    // ë†“ì€ ì¹¸ ì£¼ë³€ ë²¨íŠ¸ê°€ ìƒˆ ê±´ë¬¼ì„ ì†ŒìŠ¤Â·íƒ€ê¹ƒìœ¼ë¡œ ì¡ë„ë¡ ë‹¤ì‹œ ì—°ê²°í•œë‹¤.
+    private void ReconnectBelts(BuildingBase placed, Vector3 pos)
     {
-        Collider[] hits = Physics.OverlapSphere(miner.transform.position, 1.5f);
-
-        foreach (var col in hits)
+        // ë°©ê¸ˆ ë§Œë“  ê±´ë¬¼ì˜ ì½œë¼ì´ë”ë¥¼ ë¬¼ë¦¬ ì¿¼ë¦¬ê°€ ë³´ë„ë¡ ë™ê¸°í™”
+        Physics.SyncTransforms();
+        if (placed is ConveyorBelt belt) belt.ResolveConnections();
+        foreach (var col in Physics.OverlapSphere(pos + Vector3.up * 0.5f, 1.5f))
         {
-            var node = col.GetComponent<ResourceNodeBehaviour>();
-            if (node == null) continue;
-            miner.targetNode = node.nodeData;
-            miner.OnBuildingPlaced(); // interval Àç°è»ê
-            return;
+            var neighbor = col.GetComponentInParent<ConveyorBelt>();
+            if (neighbor != null && neighbor != placed) neighbor.ResolveConnections();
         }
+    }
+
+    private bool HasOre(Vector3 pos)
+    {
+        ChunkGenerator.GetOreDistribution(Mathf.RoundToInt(pos.x), Mathf.RoundToInt(pos.z), pos.y, _oreBuffer);
+        return _oreBuffer.Count > 0;
     }
 
     private bool TryGetGroundPoint(out Vector3 point)
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        
         if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundLayer))
-        {
-            point = hit.point;
-            return true;
-        }
-
-        point = Vector3.zero;
-        return false;
+        { point = hit.point; return true; }
+        point = Vector3.zero; return false;
     }
 
     private Vector3 Snap(Vector3 pos) => new(
-        Mathf.Round(pos.x / gridSize) * gridSize,
-        pos.y,
-        Mathf.Round(pos.z / gridSize) * gridSize
-        );
+        Mathf.Round(pos.x / gridSize) * gridSize, pos.y,
+        Mathf.Round(pos.z / gridSize) * gridSize);
 
-    private bool CanPlace(Vector3 pos) 
-        => Physics.OverlapBox(pos + Vector3.up * 0.5f, 
-            Vector3.one * 0.45f,
-            Quaternion.identity, buildingLayer).Length == 0;
+    private bool CanPlace(Vector3 pos)
+        => Physics.OverlapBox(pos + Vector3.up * 0.5f,
+               Vector3.one * 0.45f, Quaternion.identity, buildingLayer).Length == 0;
 
     private void SetPreviewMaterial(Material mat)
     {
-        foreach (var rand in _previewGO.GetComponentsInChildren<Renderer>())
-            rand.material = mat;
+        foreach (var rend in _previewGO.GetComponentsInChildren<Renderer>())
+            rend.material = mat;
     }
 }

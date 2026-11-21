@@ -2,67 +2,89 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Ã»Å© ¾ğ·Îµå ½Ã ¾À °Ç¹°À» Á÷·ÄÈ­, Àç·Îµå ½Ã º¹¿ø
-/// instanceId ±â¹İ ÂüÁ¶·Î Ã»Å© °æ°è¸¦ ³Ñ´Â ¿¬°áÀ» À¯Áö
+/// ì‚´ì•„ ìˆëŠ” ê±´ë¬¼ ì „ì²´ì˜ ëª©ë¡.
+/// ê±´ë¬¼ì€ ì²­í¬ ìŠ¤íŠ¸ë¦¬ë°ê³¼ ë¬´ê´€í•˜ê²Œ í•­ìƒ ì‚´ì•„ì„œ í‹±ì„ ë°›ëŠ”ë‹¤ â€” ë©€ë¦¬ ìˆëŠ” ê³µì¥ë„ ê³„ì† ëŒì•„ê°„ë‹¤.
+/// ì²­í¬ê°€ ë‚´ë ¤ê°€ë©´ ê·¸ ìœ„ ê±´ë¬¼ì˜ ë Œë”ëŸ¬ë§Œ ëˆë‹¤.
 /// </summary>
 public static class BuildingRegistry
 {
-    // Ã»Å© ÁÂÇ¥º° Á÷·ÄÈ­ µ¥ÀÌÅÍ
-    private static readonly Dictionary<Vector2Int, List<BuildingSaveData>> _registry = new();
+    private static readonly Dictionary<string, BuildingBase> _live = new();
 
-    // instanceId -> ¾À ¿ÀºêÁ§Æ® (·ÎµåµÈ Ã»Å© °Ç¹°¸¸ Á¸Àç)
-    private static readonly Dictionary<string, BuildingBase> _liveBuildings = new();
+    // ë³µì›í•˜ì§€ ëª»í•œ ê±´ë¬¼(ì¹´íƒˆë¡œê·¸ì— í”„ë¦¬íŒ¹ ì—†ìŒ). ë²„ë¦¬ì§€ ì•Šê³  ë‹¤ìŒ ì €ì¥ì— ì›ë³¸ ê·¸ëŒ€ë¡œ ë‹¤ì‹œ ì“´ë‹¤.
+    private static readonly List<BuildingSaveData> _unresolved = new();
 
-    // µî·Ï / ÇØÁ¦
-    /// <summary> °Ç¹° ¹èÄ¡ ½Ã µî·Ï. BuildingBase.Start()¿¡¼­ È£Ãâ </summary>
-    public static void Register(string instanceId, BuildingBase building)
-        => _liveBuildings[instanceId] = building;
-
-    public static void Unregister(string instanceId)
-        => _liveBuildings.Remove(instanceId);
-
-    /// <summary> instanceId·Î ¾À °Ç¹° °Ë»ö. ¾ğ·Îµå »óÅÂ¸é null </summary>
-    public static BuildingBase FindById(string instanceId)
-        => _liveBuildings.TryGetValue(instanceId, out var building) ? building : null;
-
-    // Å° º¹»ç ¹öÆÛ Àç»ç¿ë - SerializeChunk È£Ãâ¸¶´Ù »õ·Î¿î List »ı¼º ¹æÁö¿ë
-    private static readonly List<string> _keyBuffer = new();
-
-    // Á÷·ÄÈ­ / º¹¿ø
-    /// <summary> Ã»Å© ¾ğ·Îµå ½Ã: ¾À °Ç¹° -> µ¥ÀÌÅÍ·Î º¯È¯ ÈÄ ºñÈ°¼ºÈ­ </summary>
-    public static void SerializeChunk(Vector2Int coord)
+    public static void Register(string id, BuildingBase b)
     {
-        var saveList = new List<BuildingSaveData>();
-
-        _keyBuffer.Clear();
-        _keyBuffer.AddRange(_liveBuildings.Keys);
-
-        foreach (var id in _keyBuffer)
-        {
-            if (!_liveBuildings.TryGetValue(id, out var building) || building == null) continue;
-
-            if (ChunkUtils.WorldToChunk(building.transform.position) != coord) continue;
-
-            saveList.Add(building.Serialize());
-            building.gameObject.SetActive(false);
-        }
-
-        _registry[coord] = saveList;
+        if (_live.TryGetValue(id, out var existing) && existing != null && existing != b)
+            Debug.LogError($"[BuildingRegistry] instanceId ì¤‘ë³µ: {id} â€” '{existing.name}'ê³¼ '{b.name}'. ë‚˜ì¤‘ ê±´ë¬¼ë¡œ ë®ì–´ì”ë‹ˆë‹¤.", b);
+        _live[id] = b;
     }
 
-    /// <summary> Ã»Å© ·Îµå½Ã: ÀúÀå µ¥ÀÌÅÍ -> ¾À ¿ÀºêÁ§Æ® ½ºÆù </summary>
-    public static void RestoreChunk(Vector2Int coord, BuildingCategory category,
-                                    List<BuildingSaveData> buildings,
-                                    List<NodeEntry> nodes)
+    /// <summary>bê°€ ê·¸ idë¡œ ë“±ë¡ëœ ë³¸ì¸ì¼ ë•Œë§Œ ì§€ìš´ë‹¤ â€” idê°€ ê²¹ì¹œ ë‹¤ë¥¸ ê±´ë¬¼ì˜ ë“±ë¡ì„ ì§€ìš°ì§€ ì•Šê²Œ.</summary>
+    public static void Unregister(string id, BuildingBase b)
     {
-        if (buildings == null) return;
-        
-        foreach (var save in buildings)
+        if (id != null && _live.TryGetValue(id, out var current) && current == b)
+            _live.Remove(id);
+    }
+
+    public static BuildingBase FindById(string id) => _live.TryGetValue(id, out var b) ? b : null;
+
+    /// <summary>ì €ì¥ìš© â€” ì‚´ì•„ ìˆëŠ” ëª¨ë“  ê±´ë¬¼ì„ ì§ë ¬í™”. ë³µì›í•˜ì§€ ëª»í•œ ê±´ë¬¼ë„ ì›ë³¸ ê·¸ëŒ€ë¡œ í¬í•¨í•œë‹¤.</summary>
+    public static List<BuildingSaveData> SerializeAll()
+    {
+        var list = new List<BuildingSaveData>(_live.Count + _unresolved.Count);
+        foreach (var b in _live.Values)
+            if (b != null) list.Add(b.Serialize());
+        list.AddRange(_unresolved);
+        return list;
+    }
+
+    /// <summary>ê²Œì„ ì‹œì‘ ë•Œ í•œ ë²ˆ â€” ì €ì¥ëœ ê±´ë¬¼ì„ ì „ë¶€ ë§Œë“ ë‹¤.</summary>
+    public static void RestoreAll(BuildingCatalog catalog, List<BuildingSaveData> saves)
+    {
+        _unresolved.Clear();
+        if (saves == null || saves.Count == 0) return;
+        if (catalog == null)
         {
-            var prefab = category.Get(save.buildingId);
-            if (prefab == null) continue;
-            Object.Instantiate(prefab, save.position, save.rotation).Deserialize(save);
+            Debug.LogError("[BuildingRegistry] BuildingCatalogê°€ ì—°ê²°ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤ â€” ê±´ë¬¼ì„ ë³µì›í•˜ì§€ ì•Šê³  ì €ì¥ ë°ì´í„°ë¥¼ ë³´ê´€í•©ë‹ˆë‹¤.");
+            _unresolved.AddRange(saves);
+            return;
         }
-        // TODO: nodes -> ResourceNodeBehavior º¹¿ø   
+
+        var belts = new List<ConveyorBelt>();
+        foreach (var save in saves)
+        {
+            var prefab = catalog.Get(save.buildingId);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[BuildingRegistry] ì¹´íƒˆë¡œê·¸ì— '{save.buildingId}' ì—†ìŒ â€” ë³´ê´€í•´ ë‘ê³  ë‹¤ìŒ ì €ì¥ì— ê·¸ëŒ€ë¡œ ì”ë‹ˆë‹¤.");
+                _unresolved.Add(save);
+                continue;
+            }
+            var building = Object.Instantiate(prefab, save.position, save.rotation);
+            building.Deserialize(save);
+            if (building is ConveyorBelt belt) belts.Add(belt);
+        }
+
+        // ë²¨íŠ¸ëŠ” ì €ì¥ëœ ìœ„ì¹˜Â·ë°©í–¥ ê·¸ëŒ€ë¡œ ì•ë’¤ ì¹¸ì„ ë‹¤ì‹œ ì°¾ì•„ ì—°ê²°í•œë‹¤.
+        // ë°©ê¸ˆ ë§Œë“  ê±´ë¬¼ì˜ ì½œë¼ì´ë”ë¥¼ ë¬¼ë¦¬ ì¿¼ë¦¬ê°€ ë³´ë„ë¡ ë¨¼ì € ë™ê¸°í™”.
+        Physics.SyncTransforms();
+        foreach (var belt in belts) belt.ResolveConnections();
+    }
+
+    /// <summary>ì²­í¬ê°€ ì˜¬ë¼ì˜¤ê±°ë‚˜ ë‚´ë ¤ê°ˆ ë•Œ ê·¸ ì²­í¬ ìœ„ ê±´ë¬¼ì˜ ë Œë”ëŸ¬ë¥¼ ì¼œê³  ëˆë‹¤.</summary>
+    public static void SetChunkVisible(Vector2Int coord, bool visible)
+    {
+        foreach (var b in _live.Values)
+            if (b != null && ChunkUtils.WorldToChunk(b.transform.position) == coord)
+                b.SetVisible(visible);
+    }
+
+    // Enter Play Modeì—ì„œ Domain Reloadë¥¼ êº¼ë„ ì´ì „ í”Œë ˆì´ì˜ ê±´ë¬¼ ëª©ë¡ì´ ë‚¨ì§€ ì•Šê²Œ ì´ˆê¸°í™”
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        _live.Clear();
+        _unresolved.Clear();
     }
 }

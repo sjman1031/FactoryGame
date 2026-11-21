@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./Library/**)",
+      "Edit(./Library/**)",
+      "Read(./Temp/**)",
+      "Edit(./Temp/**)",
+      "Read(./Logs/**)",
+      "Edit(./**/*.meta)"
+    ]
+  }
+}

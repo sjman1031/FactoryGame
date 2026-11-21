@@ -1,41 +1,39 @@
 using UnityEngine;
 
-/// <summary>
-/// ¸ğµç °Ç¹°ÀÇ °øÅë º£ÀÌ½º
-/// Start/OnDestroy¿¡¼­ TickManager µî·Ï/ÇØÁ¦
-/// </summary>
+/// <summary>ëª¨ë“  ê±´ë¬¼ì˜ ê³µí†µ ê³„ì•½.</summary>
 public abstract class BuildingBase : MonoBehaviour
 {
-    // Ã»Å© °æ°è ¿¬°á¿ë °íÀ¯ ID
-    public string instanceId;
+    // ì§ë ¬í™”í•˜ì§€ ì•ŠëŠ”ë‹¤ â€” í”„ë¦¬íŒ¹ì´ë‚˜ ì”¬ì— ê°’ì´ ë°•íˆë©´ ë³µì œí•œ ê±´ë¬¼ë¼ë¦¬ idê°€ ê²¹ì³ ì €ì¥ì—ì„œ í•˜ë‚˜ê°€ ë¹ ì§„ë‹¤.
+    // ê°’ì€ Awake(ìƒˆë¡œ ë°°ì¹˜)ë‚˜ Deserialize(ì €ì¥ì—ì„œ ë³µì›)ì—ì„œë§Œ ì •í•´ì§„ë‹¤.
+    [System.NonSerialized] public string instanceId;
 
     private Renderer[] _renderers;
 
-    // Deserialize°¡ Awakeº¸´Ù ¸ÕÀú È£ÃâµÉ ¼ö ÀÖÀ¸¹Ç·Î
-    // Awake¿¡¼­ instanceId¸¦ ¹ß±ŞÇÏµÇ, ÀÌ¹Ì Deserialize·Î ¼³Á¤µÈ °ªÀÌ ÀÖÀ¸¸é À¯Áö
+    // Deserializeê°€ Awakeë³´ë‹¤ ë¨¼ì € í˜¸ì¶œë  ìˆ˜ ìˆìœ¼ë¯€ë¡œ
+    // Awakeì—ì„œ instanceIdë¥¼ ë°œê¸‰í•˜ë˜, ì´ë¯¸ Deserializeë¡œ ì„¤ì •ëœ ê°’ì´ ìˆìœ¼ë©´ ìœ ì§€.
     protected virtual void Awake()
     {
         if (string.IsNullOrEmpty(instanceId))
             instanceId = System.Guid.NewGuid().ToString();
 
-        // ¹èÄ¡¡¤º¹¿ø ¾î´À °æ·Î·Î »ı°Üµµ Building ·¹ÀÌ¾î°¡ µÇµµ·Ï ¿©±â¼­ Á¤ÇÑ´Ù.
-        // ÀÚ½Ä±îÁö ¹Ù²ã¾ß ÀÚ½Ä¿¡ ´Ş¸° Äİ¶óÀÌ´õµµ BuildingPlacerÀÇ °ãÄ§ °Ë»ç¿¡ °É¸°´Ù.
+        // ë°°ì¹˜Â·ë³µì› ì–´ëŠ ê²½ë¡œë¡œ ìƒê²¨ë„ Building ë ˆì´ì–´ê°€ ë˜ë„ë¡ ì—¬ê¸°ì„œ ì •í•œë‹¤.
+        // ìì‹ê¹Œì§€ ë°”ê¿”ì•¼ ìì‹ì— ë‹¬ë¦° ì½œë¼ì´ë”ë„ BuildingPlacerì˜ ê²¹ì¹¨ ê²€ì‚¬ì— ê±¸ë¦°ë‹¤.
         int layer = LayerMask.NameToLayer("Building");
         if (layer >= 0)
             foreach (var t in GetComponentsInChildren<Transform>(true))
                 t.gameObject.layer = layer;
     }
 
-    // Start(): Awake ÀÌÈÄ º¸Àå -> instanceId¿Í Deserialize µ¥ÀÌÅÍ°¡ ÀÌ¹Ì ¼¼ÆÃµÈ »óÅÂ
+    // Start(): Awake ì´í›„ ë³´ì¥ â†’ instanceIdì™€ Deserialize ë°ì´í„°ê°€ ì´ë¯¸ ì„¸íŒ…ëœ ìƒíƒœ
     protected virtual void Start()
     {
         TickManager.Instance.Register(this);
         BuildingRegistry.Register(instanceId, this);
 
-        // ÀúÀå¿¡¼­ º¹¿øµÈ °Ç¹°Àº Ã»Å©°¡ ¾ÆÁ÷ ¾È ·ÎµåµÈ »óÅÂÀÏ ¼ö ÀÖÀ¸¹Ç·Î
-        // Ã»Å©°¡ ·ÎµåµÇÁö ¾ÊÀº »óÅÂ¶ó¸é ·»´õ·¯¸¦ ²ö´Ù. (Ã»Å© ·Îµå ½Ã ´Ù½Ã ÄÑÁü)
+        // ì €ì¥ì—ì„œ ë³µì›ëœ ê±´ë¬¼ì€ ë°œë°‘ ì²­í¬ê°€ ì•„ì§ ì•ˆ ì˜¬ë¼ì™”ì„ ìˆ˜ ìˆë‹¤.
+        // ìˆ¨ê²¨ ë‘ë©´ ê·¸ ì²­í¬ê°€ ë¡œë“œë  ë•Œ WorldStreamingManagerê°€ ë‹¤ì‹œ ë³´ì´ê²Œ í•œë‹¤.
         var world = WorldStreamingManager.Instance;
-        if(world != null && !world.IsChunkLoaded(ChunkUtils.WorldToChunk(transform.position)))
+        if (world != null && !world.IsChunkLoaded(ChunkUtils.WorldToChunk(transform.position)))
             SetVisible(false);
 
         OnBuildingPlaced();
@@ -43,39 +41,33 @@ public abstract class BuildingBase : MonoBehaviour
 
     protected virtual void OnDestroy()
     {
-        TickManager.Instance?.UnRegister(this);
-        BuildingRegistry.Unregister(instanceId);
+        TickManager.Instance?.Unregister(this);
+        BuildingRegistry.Unregister(instanceId, this);
     }
 
-    /// <summary> ¹èÄ¡ Á÷ÈÄ 1È¸ ÃÊ±âÈ­. Start()¿¡¼­ È£Ãâ </summary> 
     public abstract void OnBuildingPlaced();
-    
-    /// <summary> TickManager°¡ _tickInterval ¸¶´Ù È£Ãâ </summary>
     public abstract void Tick(float deltaTime);
-    
+
+    /// <summary>ë Œë”ëŸ¬ë§Œ ì¼œê³  ëˆë‹¤. ìˆ¨ê²¨ë„ Tickì€ ê³„ì† ë°›ëŠ”ë‹¤.</summary>
     public void SetVisible(bool visible)
     {
         _renderers ??= GetComponentsInChildren<Renderer>(true);
         foreach (var r in _renderers) r.enabled = visible;
     }
 
-    // Á÷·ÄÈ­
-    public virtual BuildingSaveData Serialize()
+    public virtual BuildingSaveData Serialize() => new BuildingSaveData
     {
-        return new BuildingSaveData
-        {
-            buildingId = GetType().Name,
-            instanceId = instanceId,
-            position   = transform.position,
-            rotation   = transform.rotation
-        };
-    }
+        buildingId = GetType().Name,
+        instanceId = instanceId,
+        position   = transform.position,
+        rotation   = transform.rotation,
+    };
 
-    // Deserialize´Â Instantiate Á÷ÈÄ RestoreChunk¿¡¼­ È£ÃâµÊ.
-    // Unity ½ÇÇà ¼ø¼­: Instantiate -> Awake -> (ÀÌ ÇÁ·¹ÀÓ ³¡) -> Start
-    // Deserialize´Â Awake Á÷ÈÄ, Start ÀÌÀü¿¡ È£ÃâµÇ¹Ç·Î
-    // instanceId¸¦ ¿©±â¼­ µ¤¾î¾²¸é Start()ÀÇ Register¿¡ ¿Ã¹Ù¸¥ °ªÀÌ Àü´ŞµÊ.
-    // OnBuildingPlaced()´Â Start()¿¡¼­ ÇÑ ¹ø¸¸ È£ÃâµÇ¹Ç·Î Áßº¹ ¾øÀ½.
+    // DeserializeëŠ” Instantiate ì§í›„ BuildingRegistry.RestoreAllì—ì„œ í˜¸ì¶œë¨.
+    // Unity ì‹¤í–‰ ìˆœì„œ: Instantiate â†’ Awake â†’ (ì´ í”„ë ˆì„ ë) â†’ Start
+    // DeserializeëŠ” Awake ì§í›„, Start ì´ì „ì— í˜¸ì¶œë˜ë¯€ë¡œ
+    // instanceIdë¥¼ ì—¬ê¸°ì„œ ë®ì–´ì“°ë©´ Start()ì˜ Registerì— ì˜¬ë°”ë¥¸ ê°’ì´ ì „ë‹¬ë¨.
+    // OnBuildingPlaced()ëŠ” Start()ì—ì„œ í•œ ë²ˆë§Œ í˜¸ì¶œë˜ë¯€ë¡œ ì¤‘ë³µ ì—†ìŒ.
     public virtual void Deserialize(BuildingSaveData data)
     {
         instanceId         = data.instanceId;
@@ -84,15 +76,7 @@ public abstract class BuildingBase : MonoBehaviour
     }
 }
 
-// ÄÁº£ÀÌ¾î ¿¬°á °è¾à
-/// <summary> ¾ÆÀÌÅÛÀ» ³»º¸³¾ ¼ö ÀÖ´Â °Ç¹° (Ã¤±¼±â, Á¦ÀÛ±â, Ã¢°í) </summary>
-public interface IItemOutput
-{
-    bool TryOutputItem(out ItemData item);
-}
-
-/// <summary> ¾ÆÀÌÅÛÀ» ¹Ş¾ÆµéÀÏ ¼ö ÀÖ´Â °Ç¹° (Á¦ÀÛ±â, Ã¢°í) </summary>
-public interface IItemInput
-{
-    bool TryInputItem(ItemData item);
-}
+/// <summary>ì•„ì´í…œì„ ë‚´ë³´ë‚¼ ìˆ˜ ìˆëŠ” ê±´ë¬¼ (ì±„êµ´ê¸°Â·ì œì‘ê¸°Â·ì°½ê³ ).</summary>
+public interface IItemOutput { bool TryOutputItem(out ItemData item); }
+/// <summary>ì•„ì´í…œì„ ë°›ì„ ìˆ˜ ìˆëŠ” ê±´ë¬¼ (ì œì‘ê¸°Â·ì°½ê³ Â·ë²¨íŠ¸).</summary>
+public interface IItemInput  { bool TryInputItem(ItemData item); }

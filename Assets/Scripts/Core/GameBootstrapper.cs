@@ -1,36 +1,28 @@
 using UnityEngine;
 
 /// <summary>
-/// ¾À¿¡ ´Ü ÇÏ³ª Á¸ÀçÇÏ´Â ÁøÀÔÁ¡
-/// ÃÊ±âÈ­ ¼ø¼­¸¦ ¸í½ÃÀûÀ¸·Î Á¦¾î
+/// ì”¬ì— ë‹¨ í•˜ë‚˜ ì¡´ì¬í•˜ëŠ” ì§„ì…ì .
+/// ì´ˆê¸°í™” ìˆœì„œë¥¼ ëª…ì‹œì ìœ¼ë¡œ ì œì–´í•œë‹¤ â€” ìˆœì„œê°€ ê³§ ì˜ì¡´ì„± ì„ ì–¸.
 /// </summary>
 public class GameBootstrapper : MonoBehaviour
 {
-    [Header("Manager ÇÁ¸®ÆÕ")]
-    [SerializeField] private InputManager           _inputManager;
-    [SerializeField] private TickManager            _tickManager;
-    [SerializeField] private PlayerMovementManager  _movementManager;
-    [SerializeField] private WorldStreamingManager  _worldManager;
-
+    [Header("Manager â€” Inspectorì—ì„œ ì—°ê²°")]
+    [SerializeField] private InputManager          _inputManager;
+    [SerializeField] private TickManager           _tickManager;
+    [SerializeField] private WorldStreamingManager _worldManager;
+    [SerializeField] private PlayerMovementManager _movementManager;
 
     private void Awake()
     {
         InitManager(_inputManager,    "InputManager");
-        InitManager(_tickManager,     "TicManager");
-        InitManager(_movementManager, "PlayerMovementManager");
+        InitManager(_tickManager,     "TickManager");
         InitManager(_worldManager,    "WorldStreamingManager");
-
+        InitManager(_movementManager, "PlayerMovementManager");
     }
 
     private void InitManager<T>(T manager, string name) where T : MonoBehaviour
     {
         if (manager == null)
-        {
-            Debug.LogError($"[BootStrap] {name}ÀÌ ¿¬°áµÇÁö ¾Ê¾Ò½À´Ï´Ù.");
-            return;
-        }
-        // SingletonManager.Awake() °¡ DontDestroyOnLoad Ã³¸®
-        // ¿©±â¼± null Ã¼Å©¸¸ ´ã´ç
+            Debug.LogError($"[GameBootstrapper] {name} ì´ ì—°ê²°ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤!");
     }
-
 }

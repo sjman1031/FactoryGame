@@ -1,37 +1,31 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public enum NodePurity { IMPURE, NORMAL, PURE }
+public enum NodePurity { Impure, Normal, Pure }
 
-/// <summary>
-/// ÀÚ¿ø ³ëµå »êÃâ·® µ¥ÀÌÅÍ
-/// ¿¢¼¿¿¡¼­ baseOutputPerMinute ¸¸ ¹Ù²Ù¸é °ÔÀÓ¿¡ ¹İ¿µµÊ
-/// </summary>
+/// <summary>ê´‘ë¬¼ë³„ ì‚°ì¶œ ì •ì˜(ê¸°ë³¸ ì‚°ì¶œëŸ‰Â·ìˆœë„). nodeIdëŠ” ê´‘ë¬¼ idì™€ ê°™ë‹¤.</summary>
 [CreateAssetMenu(fileName = "New ResourceNode", menuName = "Game Data/ResourceNode")]
 public class ResourceNodeData : ScriptableObject
 {
-    [Header("±âº» Á¤º¸")]
-    public string     nodeID;
+    [Header("ê¸°ë³¸ ì •ë³´")]
+    // ì´ì „ ì´ë¦„ nodeIDë¡œ ì €ì¥ëœ ì—ì…‹ë„ ê·¸ëŒ€ë¡œ ì½ëŠ”ë‹¤
+    [FormerlySerializedAs("nodeID")]
+    public string     nodeId;
     public ItemData   item;
     public NodePurity purity;
 
-    [Header("»êÃâ·®")]
-    [Tooltip("±âÁØ ºĞ´ç »êÃâ·®. ¼øµµ ¹èÀ²Àº GetActualOutput()¿¡¼­ ÀÚµ¿ Àû¿ë")]
+    [Header("ì‚°ì¶œëŸ‰")]
     public float baseOutputPerMinute = 60f;
 
-    /// <summary>
-    /// ¼øµµ ¹èÀ² + Ã¤±¼±â È¿À²À» Àû¿ëÇÑ ½ÇÁ¦ »êÃâ·® °è»ê
-    /// PURE x2 / NORMAL x1 / IMPURE x0.5
-    /// </summary>
     public float GetActualOutput(float minerEfficiency = 1f)
     {
-        float purityMultiplier = purity switch
+        float purityMult = purity switch
         {
-            NodePurity.PURE   => 2f,
-            NodePurity.NORMAL => 1f,
-            NodePurity.IMPURE => 0.5f,
-            _                 => 1f
+            NodePurity.Pure   => 2.0f,
+            NodePurity.Normal => 1.0f,
+            NodePurity.Impure => 0.5f,
+            _                 => 1.0f
         };
-
-        return baseOutputPerMinute * purityMultiplier * minerEfficiency;
+        return baseOutputPerMinute * purityMult * minerEfficiency;
     }
 }

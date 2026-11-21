@@ -1,63 +1,75 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ÀÚ¿ø ³ëµå À§¿¡ ¼³Ä¡ÇØ ¾ÆÀÌÅÛÀ» ÁÖ±âÀûÀ¸·Î Ã¤±¼ÇÏ´Â Ã¤±¼±â
-/// »ı»êÇÑ ¾ÆÀÌÅÛÀº _pendingItem¿¡ ´ë±â - ÄÁº£ÀÌ¾î°¡ TryOutputItem()·Î °¡Á®°¨
+/// ê´‘ë§¥ ìœ„ì— ì„¤ì¹˜í•´ ì•„ì´í…œì„ ì£¼ê¸°ì ìœ¼ë¡œ ìƒì‚°í•˜ëŠ” ì±„êµ´ê¸°.
+/// ë†“ì¸ ì¹¸ì˜ ê´‘ë¬¼ë³„ í™•ë¥ ëŒ€ë¡œ ì—¬ëŸ¬ ê´‘ë¬¼ì„ ì„ì–´ ìº”ë‹¤.
 /// </summary>
 public class MinerBuilding : BuildingBase, IItemOutput
 {
-    [Header("Ã¤±¼±â ¼³Á¤")]
-    public ResourceNodeData targetNode;
-    [Range(0.5f, 2f)]
-    public float efficiency = 1f;
+    [Header("ì±„êµ´ê¸° ì„¤ì •")]
+    [Range(0.5f, 2f)] public float efficiency = 1f;
 
+    // ì´ ì¹¸ì—ì„œ ë‚˜ì˜¤ëŠ” ê´‘ë¬¼ê³¼ ê´‘ë¬¼ë³„ ë¶„ë‹¹ ì‚°ì¶œëŸ‰ (= ê¸°ë³¸ ì‚°ì¶œëŸ‰ Ã— ìˆœë„ Ã— íš¨ìœ¨ Ã— í™•ë¥ )
+    private readonly List<(ItemData item, float perMinute)> _yields = new();
+    private float    _totalPerMinute;
     private float    _timer;
-    private float    _interval;    // ¾ÆÀÌÅÛ 1°³ »ı»ê °£°İ (ÃÊ)
-    private ItemData _pendingItem; // Ãâ·Â ´ë±âÁßÀÎ ¾ÆÀÌÅÛ
+    private float    _interval;
+    private ItemData _pendingItem;
 
+    private static readonly List<(string oreId, float probability)> _oreBuffer = new();
+
+    // ë°°ì¹˜Â·ë³µì› ëª¨ë‘ Startì—ì„œ í•œ ë²ˆ í˜¸ì¶œëœë‹¤. ìœ„ì¹˜ë§Œìœ¼ë¡œ ë‹¤ì‹œ ê³„ì‚°í•˜ë¯€ë¡œ ì €ì¥í•  ê²ƒì´ ì—†ë‹¤.
     public override void OnBuildingPlaced()
     {
-        if (targetNode == null)
+        _yields.Clear();
+        _totalPerMinute = 0f;
+
+        Vector3 p = transform.position;
+        ChunkGenerator.GetOreDistribution(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.z), p.y, _oreBuffer);
+
+        foreach (var (oreId, probability) in _oreBuffer)
         {
-            Debug.LogWarning($"[Miner] {name} - targetNode°¡ ¾ø½À´Ï´Ù.");
-            return;
+            var node = GameDatabase.GetNode(oreId);
+            if (node == null || node.item == null)
+            {
+                Debug.LogWarning($"[MinerBuilding] ê´‘ë¬¼ '{oreId}'ì˜ ResourceNodeDataê°€ ì—†ìŠµë‹ˆë‹¤ â€” CSVì˜ ë…¸ë“œ idë¥¼ í™•ì¸í•˜ì„¸ìš”.");
+                continue;
+            }
+            float perMinute = node.GetActualOutput(efficiency) * probability;
+            _yields.Add((node.item, perMinute));
+            _totalPerMinute += perMinute;
         }
 
-        // ºĞ´ç »êÃâ·® -> ÃÊ ´ÜÀ§ »ı»ê °£°İ
-        _interval = 60f / targetNode.GetActualOutput(efficiency);
-    }
-
-    /// <summary>
-    /// ¹èÄ¡ ÈÄ ³ëµå¸¦ ¿¬°áÇÒ ¶§ È£Ãâ. OnBuildingPlaced()¸¦ Áßº¹ È£ÃâÇÏÁö ¾Ê°í
-    /// interval¸¸ Àç°è»êÇÑ´Ù.
-    /// </summary>
-    public void ConnetNode(ResourceNodeData node)
-    {
-        targetNode = node;
-        _interval = 60f / targetNode.GetActualOutput(efficiency);
+        if (_totalPerMinute <= 0f) { Debug.LogWarning($"[MinerBuilding] {name} â€” ì´ ì¹¸ì— ê´‘ë§¥ ì—†ìŒ"); return; }
+        _interval = 60f / _totalPerMinute;
     }
 
     public override void Tick(float deltaTime)
     {
-        if (targetNode == null) return;
-
-        // ´ë±âÁßÀÎ ¾ÆÀÌÅÛÀÌ ÀÖÀ¸¸é ÄÁº£ÀÌ¾î°¡ °¡Á®°¥ ¶§±îÁö »ı»ê Áß´Ü
-        if (_pendingItem != null) return;
-
-       _timer += deltaTime;
-       if (_timer < _interval) return;
-
-       _timer -= _interval;
-        _pendingItem = targetNode.item;
+        if (_totalPerMinute <= 0f || _pendingItem != null) return;
+        _timer += deltaTime;
+        if (_timer < _interval) return;
+        _timer -= _interval;
+        _pendingItem = PickItem();
     }
 
-    // IItemOutput - ÄÁº£ÀÌ¾î°¡ ¾ÆÀÌÅÛÀ» °¡Á®°¥ ¶§ È£Ãâ
+    // í•œ ë²ˆ ìº˜ ë•Œ ë‚˜ì˜¬ ê´‘ë¬¼ì„ ë¶„ë‹¹ ì‚°ì¶œëŸ‰ ë¹„ìœ¨ë¡œ ë½‘ëŠ”ë‹¤.
+    // ê·¸ë˜ì„œ ê´‘ë¬¼ë³„ ê¸°ëŒ€ ì‚°ì¶œëŸ‰ì´ 'ê¸°ë³¸ ì‚°ì¶œëŸ‰ Ã— ìˆœë„ Ã— íš¨ìœ¨ Ã— í™•ë¥ 'ê³¼ ê°™ì•„ì§„ë‹¤.
+    private ItemData PickItem()
+    {
+        float r = UnityEngine.Random.value * _totalPerMinute;
+        foreach (var (item, perMinute) in _yields)
+        {
+            if (r < perMinute) return item;
+            r -= perMinute;
+        }
+        return _yields[_yields.Count - 1].item;
+    }
+
     public bool TryOutputItem(out ItemData item)
     {
-        if (_pendingItem == null)  { item = null; return false; }
-
-        item         = _pendingItem;
-        _pendingItem = null;
-        return true;
+        if (_pendingItem == null) { item = null; return false; }
+        item = _pendingItem; _pendingItem = null; return true;
     }
 }

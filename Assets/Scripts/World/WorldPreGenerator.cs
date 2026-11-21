@@ -1,103 +1,99 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
 
-/// <summary>
-///  »õ °ÔÀÓ ½ÃÀÛ ½Ã ÀüÃ¼ ¸Ê Ã»Å©¸¦ ÀÏ°ı »ı¼ºÇØ¼­ ÆÄÀÏ·Î ÀúÀå
-///  async/await·Î ÇÁ·¹ÀÓ ºĞ»ê => ·Îµù Áß UI°¡ ¸ØÃßÁö ¾ÊÀ½
-///  </summary>
+/// <summary>ìƒˆ ê²Œì„ ì‹œì‘ ì‹œ ì „ì²´ ë§µì„ ìƒì„±í•´ì„œ SaveSystemìœ¼ë¡œ ì €ì¥.</summary>
 public class WorldPreGenerator : MonoBehaviour
 {
-    [Header("»ı¼º ¼³Á¤")]
-    [SerializeField] private int _mapWidth      = 16;  // Ã»Å© ´ÜÀ§ ¸Ê °¡·Î Å©±â
-    [SerializeField] private int _mapHeight     = 16;  // Ã»Å© ´ÜÀ§ ¸Ê ¼¼·Î Å©±â
-    [SerializeField] private int _chunkPerFrame = 4; // ÇÁ·¹ÀÓ´ç »ı¼ºÇÒ Ã»Å© ¼ö (¼º´É Á¶Àı)
+    [SerializeField] private int _mapWidth       = 16;
+    [SerializeField] private int _mapHeight      = 16;
+    [SerializeField] private int _chunksPerFrame = 4;
 
-    // ÁøÇà·ü: 0.0 ~ 1.0
-    public float  Progress   { get; private set; }
+    public float  Progress    { get; private set; }
     public bool   IsCompleted { get; private set; }
-    public string StatusText { get; private set; }
+    public bool   IsFailed    { get; private set; }
+    public string StatusText  { get; private set; }
+    public event Action         OnCompleted;
+    /// <summary>ìƒì„± ì‹¤íŒ¨. ì¸ìëŠ” ì‚¬ìš©ìì—ê²Œ ë³´ì—¬ ì¤„ ì´ìœ .</summary>
+    public event Action<string> OnFailed;
 
-    // ¿Ï·á ½Ã ¹ßÇà
-    public event Action OnComplete;
-
-    // ¿ÜºÎ ÁøÀÔÁ¡
-    /// <summary> LoadingSceneController°¡ »õ °ÔÀÓ ½ÃÀÛ ½Ã È£Ãâ </summary>
     public async Task GenerateAll(int slot, float seed)
     {
+        IsCompleted = false; IsFailed = false; Progress = 0f;
+
+        // ë§µ ì¤‘ì•™ ì²­í¬ì˜ í•œê°€ìš´ë° â€” í‰ì§€ ì¡´ì˜ ì¤‘ì‹¬ì´ì í”Œë ˆì´ì–´ ì‹œì‘ì .
+        // ì²­í¬ ëª¨ì„œë¦¬ê°€ ì•„ë‹ˆë¼ ê°€ìš´ë°ë¼ì„œ ì²­í¬ ê²½ê³„ì— ê±¸ì¹˜ì§€ ì•ŠëŠ”ë‹¤.
+        var center = new Vector2Int(_mapWidth / 2, _mapHeight / 2);
+        var spawn  = ChunkUtils.ChunkToWorld(center)
+                   + new Vector3(ChunkUtils.CHUNK_SIZE / 2, 0f, ChunkUtils.CHUNK_SIZE / 2);
+
         ChunkGenerator.SetSeed(seed);
+        ChunkGenerator.SetFlatCenter(new Vector2(spawn.x, spawn.z));
 
-        int total  = _mapWidth * _mapHeight;
-        int done   = 0;
-        var coords = BuildCoordList(_mapWidth, _mapHeight);
-        var nodes  = new List<NodeEntry>();
+        int  total  = _mapWidth * _mapHeight;
+        int  done   = 0;
+        var  coords = BuildCoordList(_mapWidth, _mapHeight);
+        // í”Œë ˆì´ ëª¨ë“œë¥¼ ë„ê±°ë‚˜ ì”¬ì´ ë°”ë€Œì–´ ì´ ì˜¤ë¸Œì íŠ¸ê°€ íŒŒê´´ë˜ë©´ ìƒì„±ì„ ë©ˆì¶˜ë‹¤
+        var  token  = destroyCancellationToken;
 
-        StatusText = "ÁöÇü »ı¼º Áß...";
+        StatusText = "ì§€í˜• ìƒì„± ì¤‘...";
 
         try
         {
-            SaveSystem.BeginWorldWrite(slot, total);
+            SaveSystem.BeginWorldWrite(slot, total, seed);
 
             foreach (var coord in coords)
             {
                 ChunkData data = ChunkGenerator.Generate(coord);
-
-                foreach (var n in data.nodes)
-                {
-                    n.chunkCoordX = coord.x; n.chunkCoordZ = coord.y;
-                    nodes.Add(n);
-                }
-
-                SaveSystem.WriteChunk(coord, data);
+                SaveSystem.WriteChunk(coord, data);   // ì‹¤íŒ¨í•˜ë©´ ì˜ˆì™¸ â†’ catchì—ì„œ Abort
 
                 done++;
                 Progress   = (float)done / total;
-                StatusText = $"ÁöÇü »ı¼º Áß... ({done}/{total}) [{coord.x}, {coord.y}]";
-                if (done % _chunkPerFrame == 0) await Task.Yield();
+                StatusText = $"ì§€í˜• ìƒì„± ì¤‘... ({done}/{total})";
+                if (done % _chunksPerFrame == 0)
+                {
+                    await Task.Yield();
+                    token.ThrowIfCancellationRequested();
+                }
             }
 
-            var center = new Vector2Int(_mapWidth / 2 , _mapWidth / 2);
-            var playerStart = ChunkUtils.ChunkToWorld(center);
+            StatusText = "íŒŒì¼ ì €ì¥ ì¤‘...";
+            // ì—¬ê¸°ì„œ world.bin.tmp â†’ world.binìœ¼ë¡œ ì»¤ë°‹ëœë‹¤. ê·¸ ì „ì—ëŠ” "ì €ì¥ ìˆìŒ"ì´ ë˜ì§€ ì•ŠëŠ”ë‹¤.
+            // spawn.yëŠ” í‰ì§€ ì¡´ì˜ ì§€ë©´ ë†’ì´(0). ë¶ˆëŸ¬ì˜¬ ë•Œ SaveControllerê°€ ì‚´ì§ ë„ì›Œì„œ ë°°ì¹˜í•œë‹¤.
+            SaveSystem.FinalizeWorldWrite(slot, spawn);
 
-            StatusText = "ÆÄÀÏ ÀúÀå Áß...";
-            SaveSystem.FinalizeWorldWrite(slot, nodes, playerStart);
-
-            StatusText = "¿Ï·á!"; Progress = 1f; IsCompleted = true;
-            OnComplete?.Invoke();
+            StatusText = "ì™„ë£Œ!"; Progress = 1f; IsCompleted = true;
+            OnCompleted?.Invoke();
+        }
+        catch (OperationCanceledException)
+        {
+            // ìƒì„± ë„ì¤‘ ì¢…ë£Œ â€” ì“°ë‹¤ ë§Œ world.bin.tmpë¥¼ ì§€ìš´ë‹¤. ê¸°ì¡´ ì„¸ì´ë¸ŒëŠ” ê·¸ëŒ€ë¡œë‹¤.
+            SaveSystem.AbortWorldWrite();
         }
         catch (Exception e)
         {
-            // ¿¹¿Ü ½Ã ·Îµù È­¸éÀÌ ¹«ÇÑ ´ë±âÇÏÁö ¾Êµµ·Ï ½ÇÆĞ Ç¥½Ã
-            StatusText = "¿À·ù ¹ß»ı - ´Ù½Ã ½ÃµµÇØÁÖ¼¼¿ä.";
-            Debug.LogWarning($"[WorldPreGenerator] ¸Ê »ı¼º ½ÇÆĞ: {e.Message}");
+            SaveSystem.AbortWorldWrite();
+            IsFailed   = true;
+            StatusText = "ë§µ ìƒì„±ì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.";
+            Debug.LogException(e, this);
+            OnFailed?.Invoke(e.Message);
         }
     }
 
-    // ³»ºÎ À¯Æ¿
-    /// <summary> 
-    /// ÇÃ·¹ÀÌ¾î ½ÃÀÛ ÁöÁ¡(¸Ê Áß¾Ó)¿¡¼­ °¡±î¿î Ã»Å©ºÎÅÍ ¿ì¼± »ı¼º
-    /// ·Îµù Á÷ÈÄ ÇÃ·¹ÀÌ¾î°¡ ºó ¸Ê¿¡ ³õÀÌ´Â »óÈ²À» ¹æÁö
-    /// </summary> 
-    private List<Vector2Int> BuildCoordList(int width, int height)
+    private void OnDestroy()
     {
-        var center = new Vector2Int(width / 2, height / 2);
-        var list   = new List<Vector2Int>();
+        // await ì‚¬ì´ì— íŒŒê´´ë¼ continuationì´ ë‹¤ì‹œ ëŒì§€ ëª»í•˜ëŠ” ê²½ìš°ì—ë„ íŒŒì¼ í•¸ë“¤ì„ ë‹«ëŠ”ë‹¤
+        if (!IsCompleted) SaveSystem.AbortWorldWrite();
+    }
 
-        for (int x = 0; x < width; x++)
-            for (int z = 0; z < height; z++)
-                list.Add(new Vector2Int(x, z));
-
-        // Áß¾Ó¿¡¼­ °¡±î¿î ¼øÀ¸·Î Á¤·Ä
-        list.Sort((a, b) =>
-        {
-            int sqrDa = (a - center).sqrMagnitude;
-            int sqrDb = (b - center).sqrMagnitude;  
-
-            return sqrDa.CompareTo(sqrDb);  
-        });
-
+    private List<Vector2Int> BuildCoordList(int w, int h)
+    {
+        var center = new Vector2Int(w / 2, h / 2);
+        var list   = new List<Vector2Int>(w * h);
+        for (int x = 0; x < w; x++) for (int z = 0; z < h; z++)
+            list.Add(new Vector2Int(x, z));
+        list.Sort((a, b) => (a - center).sqrMagnitude.CompareTo((b - center).sqrMagnitude));
         return list;
     }
 }

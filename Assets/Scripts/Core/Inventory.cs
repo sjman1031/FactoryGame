@@ -2,73 +2,81 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// ¾ÆÀÌÅÛ º¸À¯·® °ü¸®. ¼ø¼ö C# Å¬·¡½º
-/// ÇÃ·¹ÀÌ¾î, Ã¢°í, Á¦ÀÛ±â ÀÔ/Ãâ·Â ¹öÆÛ ¸ğµÎ ÀÌ Å¬·¡½º »ç¿ë
-/// </summary>  
+/// ì•„ì´í…œ ë³´ìœ ëŸ‰ ê´€ë¦¬. ìˆœìˆ˜ C# â€” MonoBehaviour ì•„ë‹˜.
+/// í”Œë ˆì´ì–´, ì°½ê³ , ì œì‘ê¸° ì…ë ¥ë²„í¼ ë“± ëª¨ë‘ ì´ í´ë˜ìŠ¤ë¥¼ ì‚¬ìš©í•œë‹¤.
+///
+/// ìŠ¬ë¡¯ ëª¨ë¸: ì•„ì´í…œ í•˜ë‚˜ê°€ stackSizeê°œë§ˆë‹¤ ìŠ¬ë¡¯ í•œ ì¹¸ì„ ì°¨ì§€í•œë‹¤.
+/// ì˜ˆ) ìŠ¬ë¡¯ 20ì¹¸, ì² ê´‘ì„ stackSize 100 â†’ ì² ê´‘ì„ë§Œ ë„£ìœ¼ë©´ 2000ê°œê¹Œì§€ ë“¤ì–´ê°„ë‹¤.
+/// (ì´ì „ì—ëŠ” stackSizeë¥¼ ì•„ì´í…œ ì¢…ë¥˜ë³„ ì´ëŸ‰ í•œë„ë¡œ ì¨ì„œ ì°½ê³ ê°€ ì¢…ë¥˜ë§ˆë‹¤ í•œ ìŠ¤íƒì—ì„œ ë©ˆì·„ìŒ)
+/// ë³´ìœ ëŸ‰ì€ ì¢…ë¥˜ë³„ ì´ëŸ‰ìœ¼ë¡œ ë“¤ê³  ìˆìœ¼ë¯€ë¡œ ì €ì¥ í˜•ì‹(InventoryEntry{itemId, amount})ì€ ê·¸ëŒ€ë¡œë‹¤.
+/// </summary>
 public class Inventory
 {
     private readonly Dictionary<ItemData, int> _items = new();
     private readonly int _maxSlots;
 
-    /// <summary> ¾ÆÀÌÅÛ Ãß°¡/Á¦°Å ½Ã ¹ßÇà. UI °»½Å ¿¬µ¿¿ë </summary>
     public event Action OnChanged;
 
     public Inventory(int maxSlots = 20) => _maxSlots = maxSlots;
 
-    // ÀĞ±â
-    public int GetAmount(ItemData item)
-        => _items.TryGetValue(item, out int amount) ? amount : 0;
-
-    public bool HasItem(ItemData item, int amount = 1)
-        => GetAmount(item) >= amount;           
+    public int  MaxSlots => _maxSlots;
+    public int  GetAmount(ItemData item) => item != null && _items.TryGetValue(item, out int n) ? n : 0;
+    public bool HasItem(ItemData item, int amount = 1) => GetAmount(item) >= amount;
     public IReadOnlyDictionary<ItemData, int> GetAll() => _items;
 
-    // ¾²±â
-    /// <summary> 
-    /// ¾ÆÀÌÅÛ Ãß°¡ ½Ãµµ. 
-    /// ½½·Ô ÃÊ°ú ¶Ç´Â ½ºÅÃ ÇÑµµ ÃÊ°ú ½Ã false ¹İÈ¯
-    /// </summary>
+    /// <summary>í˜„ì¬ ì‚¬ìš© ì¤‘ì¸ ìŠ¬ë¡¯ ìˆ˜.</summary>
+    public int UsedSlots
+    {
+        get
+        {
+            int used = 0;
+            foreach (var kv in _items) used += SlotsFor(kv.Key, kv.Value);
+            return used;
+        }
+    }
+
+    /// <summary>ì´ ì•„ì´í…œì„ ë” ë„£ì„ ìˆ˜ ìˆëŠ” ìµœëŒ€ ê°œìˆ˜ (ë¹ˆ ìŠ¬ë¡¯ + ì´ ì•„ì´í…œ ë§ˆì§€ë§‰ ìŠ¤íƒì˜ ë‚¨ì€ ì¹¸).</summary>
+    public int GetAddableAmount(ItemData item)
+    {
+        if (item == null) return 0;
+        int stack       = Math.Max(1, item.stackSize);
+        int current     = GetAmount(item);
+        int othersSlots = UsedSlots - SlotsFor(item, current);
+        int freeSlots   = _maxSlots - othersSlots;
+        return Math.Max(0, freeSlots * stack - current);
+    }
+
     public bool TryAdd(ItemData item, int amount)
     {
-        if (amount <= 0) return false;
-        if (!_items.ContainsKey(item) && _items.Count >= _maxSlots) return false;
+        if (item == null || amount <= 0) return false;
+        if (amount > GetAddableAmount(item)) return false;
 
-        int newAmount = GetAmount(item) + amount;
-
-        // ½ºÅÃ ÇÑµµ ÃÊ°ú
-        if (newAmount > item.stackSize) return false;
-
-        _items[item] = newAmount;
+        _items[item] = GetAmount(item) + amount;
         OnChanged?.Invoke();
         return true;
     }
 
-    /// <summary>
-    /// ¾ÆÀÌÅÛ Á¦°Å ½Ãµµ.
-    /// º¸À¯·® ºÎÁ· ½Ã false ¹İÈ¯ - ºÎºĞ Â÷°¨ ¾øÀ½
-    /// </summary>
     public bool TryRemove(ItemData item, int amount)
     {
-        if (!HasItem(item, amount)) return false;
-
+        if (item == null || amount <= 0 || !HasItem(item, amount)) return false;
         _items[item] -= amount;
-        if(_items[item] <= 0) _items.Remove(item);
-
-        OnChanged?.Invoke();   
-        return true;    
+        if (_items[item] <= 0) _items.Remove(item);
+        OnChanged?.Invoke();
+        return true;
     }
 
-    /// <summary>
-    /// ·¹½ÃÇÇ Àç·á¸¦ ÇÑ ¹ø¿¡ ¼Ò¸ğ.
-    /// CanCraft È®ÀÎ ÈÄ ÀüÃ¼ Â÷°¨
-    /// </summary>
     public bool TryConsumeRecipe(RecipeData recipe)
     {
         if (!recipe.CanCraft(this)) return false;
-
-        foreach(var ingredient in recipe.inputs)
-            TryRemove(ingredient.item, ingredient.amount);
-
+        foreach (var ing in recipe.inputs)
+            TryRemove(ing.item, ing.amount);
         return true;
+    }
+
+    private static int SlotsFor(ItemData item, int amount)
+    {
+        if (amount <= 0) return 0;
+        int stack = Math.Max(1, item.stackSize);
+        return (amount + stack - 1) / stack;   // ì˜¬ë¦¼ ë‚˜ëˆ—ì…ˆ
     }
 }

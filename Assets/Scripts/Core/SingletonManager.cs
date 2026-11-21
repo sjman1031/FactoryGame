@@ -1,38 +1,25 @@
 using UnityEngine;
 
 /// <summary>
-/// ¸ğµç Manager Å¬·¡½ºÀÇ º£ÀÌ½º
-/// Áßº¹ ¹æÁö + OnDestroyOnLoad ¸¦ ÇÑ °÷¿¡¼­ Ã³¸®ÇÔ
+/// ëª¨ë“  Managerì˜ ë² ì´ìŠ¤.
+/// ì¤‘ë³µ ë°©ì§€ + DontDestroyOnLoadë¥¼ í•œ ê³³ì—ì„œ ì²˜ë¦¬í•œë‹¤.
 /// </summary>
-/// <typeparam name="T"></typeparam>
 public abstract class SingletonManager<T> : MonoBehaviour where T : MonoBehaviour
 {
     public static T Instance { get; private set; }
 
     protected virtual void Awake()
     {
-        if (Instance != null)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
+        if (Instance != null) { Destroy(gameObject); return; }
         Instance = this as T;
         DontDestroyOnLoad(gameObject);
-        OnInit();
+        OnInitialize();
     }
-    
-    /// <summary>
-    /// ÇÏÀ§ Å¬·¡½º ÃÊ±âÈ­ ÁøÀÔÁ¡
-    /// Awake ´ë½Å ÀÌ°É ¿À¹ö¶óÀÌµå ÇÔ
-    /// </summary>
-    protected virtual void OnInit() { }
+
+    protected virtual void OnInitialize() { }
 
     protected virtual void OnDestroy()
     {
-        if (Instance == this)
-        {
-            Instance = null;
-        }
+        if (Instance == this) Instance = null;
     }
 }
