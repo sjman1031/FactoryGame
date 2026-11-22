@@ -18,7 +18,24 @@ public class ChunkInstance : MonoBehaviour
         _collider = GetComponent<MeshCollider>();
         _mesh     = new Mesh();
         _filter.sharedMesh = _mesh;
+
+        // BuildingPlacer는 Ground 레이어로만 지면을 찾는다. 프리팹 설정을 빠뜨려도 배치가 되도록 여기서 정한다.
+        // (BuildingBase가 Building 레이어를 정하는 것과 같은 방식)
+        int layer = LayerMask.NameToLayer(GROUND_LAYER);
+        if (layer >= 0) gameObject.layer = layer;
+        else if (!s_warnedMissingLayer)
+        {
+            s_warnedMissingLayer = true;
+            Debug.LogWarning($"[ChunkInstance] '{GROUND_LAYER}' 레이어가 없습니다 — Project Settings › Tags and Layers에 추가하세요. " +
+                             "없으면 건물 배치가 지면을 찾지 못합니다.", this);
+        }
     }
+
+    public const string GROUND_LAYER = "Ground";
+    private static bool s_warnedMissingLayer;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => s_warnedMissingLayer = false;
 
     private void OnDestroy()
     {

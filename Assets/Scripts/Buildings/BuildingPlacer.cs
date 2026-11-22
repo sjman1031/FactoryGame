@@ -23,8 +23,28 @@ public class BuildingPlacer : MonoBehaviour
 
     private readonly List<(string oreId, float probability)> _oreBuffer = new();
 
+    public bool         IsPlacing     => _isPlacing;
+    public BuildingBase CurrentPrefab => _currentPrefab;
+
+    // 컴포넌트를 처음 붙일 때 레이어 마스크를 이름으로 채운다 (ChunkInstance=Ground, BuildingBase=Building)
+    private void Reset()
+    {
+        groundLayer   = LayerMask.GetMask(ChunkInstance.GROUND_LAYER);
+        buildingLayer = LayerMask.GetMask("Building");
+    }
+
+    private void Awake()
+    {
+        // 마스크가 비어 있으면 레이캐스트가 아무것도 맞히지 못해 배치가 조용히 안 된다
+        if (groundLayer.value == 0)
+            Debug.LogWarning("[BuildingPlacer] groundLayer가 비어 있습니다 — Ground 레이어를 지정하세요.", this);
+        if (buildingLayer.value == 0)
+            Debug.LogWarning("[BuildingPlacer] buildingLayer가 비어 있습니다 — 건물끼리 겹쳐 놓일 수 있습니다.", this);
+    }
+
     public void BeginPlace(BuildingBase prefab)
     {
+        if (prefab == null) { Debug.LogWarning("[BuildingPlacer] 프리팹이 비어 있습니다.", this); return; }
         CancelPlace();
         _currentPrefab = prefab;
         _isPlacing     = true;
@@ -40,7 +60,9 @@ public class BuildingPlacer : MonoBehaviour
     public void CancelPlace()
     {
         if (_previewGO != null) Destroy(_previewGO);
-        _isPlacing = false;
+        _previewGO     = null;
+        _currentPrefab = null;
+        _isPlacing     = false;
     }
 
     private void Update()
@@ -92,7 +114,10 @@ public class BuildingPlacer : MonoBehaviour
 
     private bool TryGetGroundPoint(out Vector3 point)
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        // MainCamera 태그가 없으면 Camera.main이 null — 매 프레임 NRE 대신 배치만 멈춘다
+        var cam = Camera.main;
+        if (cam == null) { point = Vector3.zero; return false; }
+        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundLayer))
         { point = hit.point; return true; }
         point = Vector3.zero; return false;

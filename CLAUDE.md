@@ -33,13 +33,13 @@
 - UI: UGUI(`Slider`, `Button`) + TextMeshPro(`TMP_Text`).
 - 입력: 구 Input Manager(`Input.GetAxis`/`GetButtonDown`).
 
-## 3. 폴더와 파일 (Assets/Scripts, 36개 — 2026-11-22 기준)
+## 3. 폴더와 파일 (Assets/Scripts, 37개 — 2026-11-22 기준)
 | 폴더 | 파일 |
 |---|---|
 | Core | GameBootstrapper, SingletonManager, TickManager, Inventory, TaskExtensions |
 | Data | GameDatabase, ItemData, RecipeData, ResourceNodeData |
 | World | ChunkData, ChunkGenerator, ChunkInstance, ChunkUtils, OreTable, WorldPreGenerator, WorldStreamingManager |
-| Buildings | BuildingBase, BuildingCatalog, BuildingPlacer, BuildingRegistry, ConveyorBelt, ManufacturerBuilding, MinerBuilding, StorageBuilding, ResourceNodeBehaviour(V2 결정 대기) |
+| Buildings | BuildingBase, BuildingCatalog, BuildingHotbar, BuildingPlacer, BuildingRegistry, ConveyorBelt, ManufacturerBuilding, MinerBuilding, StorageBuilding, ResourceNodeBehaviour(V2 결정 대기) |
 | Player | InputManager, PlayerController, PlayerMovementManager, PlayerStateManager |
 | Save | SaveSystem, SaveController, LiveData(+InventorySaveUtil) |
 | UI | LoadingSceneController, LoadingUIController |
@@ -49,7 +49,7 @@
 그 밖의 자산:
 - `Assets/Data/CSV/` — items(17행) · recipes(12행) · resource_nodes(5행). UTF-8 BOM, `#` 주석 줄 있음.
 - `Assets/Data/ScriptableObjects/` — Items 17 · Recipes 12 · ResourceNodes 5. **아직 이전 필드명(nodeID, craftingTime)으로 저장돼 있음** → `FormerlySerializedAs`로 읽힘. 전체 임포트하면 새 이름으로 갱신된다.
-- `Assets/Scenes/` — LoadingScene, MainScene. **스크립트가 하나도 붙어 있지 않다(S4).** Build Settings 씬 목록도 비어 있다.
+- `Assets/Scenes/` — LoadingScene, MainScene. **스크립트가 하나도 붙어 있지 않다(S4).** Build Settings 씬 목록도 비어 있다. 구성안은 `docs/bugfix-2026-11-22.md` 4절.
 - `Assets/Prefabs/` 없음. `Assets/Resources/GameDatabase.asset` 없음(전체 임포트로 생성).
 - `docs/` — 4절 "문서 목록" 참고.
 
@@ -60,6 +60,7 @@
 | `code-sync-check-2026-11-21.md` | 스크립트 최신화 후 문서와의 차이 점검. S1~S7, V1~V5, R1~R4 |
 | `bugfix-2026-11-21.md` | 위 두 문서 기준 버그 수정 전체 기록 (수정 내역, 바뀐 API, 에디터 할 일, 고치지 않은 것) |
 | `docs-2026-11-22.md` | CLAUDE.md 전면 정리, 리뷰 문서 이동, 수정 기록 규칙 도입 |
+| `bugfix-2026-11-22.md` | 씬 구성 점검: 배치 입력(BuildingHotbar), 게임 씬 이름, Ground 레이어 수정 + **씬·프리팹 구성안(S4)** |
 
 우선순위는 리뷰 로드맵을 따르되, 이미 처리된 항목은 `bugfix-2026-11-21.md` 기준으로 판단한다.
 
@@ -119,10 +120,11 @@
 ## 9. 현재 상태와 할 일 (2026-11-22)
 
 ### 사용자가 Unity 에디터에서 할 일 (아직 안 함)
-1. Unity를 열어 컴파일 확인. `.meta`가 없는 스크립트 11개(BuildingCatalog, ManufacturerBuilding, ResourceNodeBehaviour, TaskExtensions, GameDatabase, PlayerStateManager, LiveData, SaveController, ChunkData, ChunkUtils, OreTable)는 이때 Unity가 만든다 → 생긴 `.meta`는 커밋해야 다른 PC에서 GUID가 같다.
+1. Unity를 열어 컴파일 확인. `.meta` 11개(BuildingCatalog, ManufacturerBuilding, ResourceNodeBehaviour, TaskExtensions, GameDatabase, PlayerStateManager, LiveData, SaveController, ChunkData, ChunkUtils, OreTable)는 **생성·커밋 완료(2026-11-22)**. 새 `BuildingHotbar.cs.meta`는 다음에 Unity를 열 때 생긴다 → 커밋해야 다른 PC에서 GUID가 같다.
 2. **세이브를 열기 전에** Data Importer › 🔄 전체 임포트 → `Assets/Resources/GameDatabase.asset` 생성.
-3. 씬·프리팹 구성(S4): LoadingScene(LoadingSceneController · WorldPreGenerator · LoadingUIController), MainScene(GameBootstrapper · 매니저들 · SaveController · BuildingCatalog · BuildingPlacer · 플레이어 · 건물 프리팹 4종), Build Settings 등록.
-4. 구성 후 Play 모드 체크리스트: `docs/bugfix-2026-11-21.md` 5절.
+3. Tags & Layers에 `Ground`, `Building` 레이어 추가.
+4. 씬·프리팹 구성(S4): `docs/bugfix-2026-11-22.md` 4절 구성안대로. Build Settings에 LoadingScene(0) · MainScene(1) 등록. Play는 항상 LoadingScene에서 시작.
+5. 구성 후 Play 모드 체크리스트: `docs/bugfix-2026-11-21.md` 5절. 건물 배치는 숫자키 1~4(BuildingHotbar), R 회전, Esc 취소.
 
 ### 사용자 결정 대기 (구조 변경 — 먼저 묻고 진행)
 | ID | 내용 | 선택지 |
@@ -135,14 +137,14 @@
 | V2 | `Buildings/ResourceNodeBehaviour.cs` | 삭제 / K3 시각화 도구로 전환 |
 
 ### 남은 개선 (결정 불필요, 로드맵 순서대로)
-- 기능: K2 진행 상태 저장, K5 #21 이동 보간, K6 씬 재진입.
+- 기능: K2 진행 상태 저장, K5 #21 이동 보간, K6 씬 재진입(매니저 수명 구조라 W13과 함께), 건설 메뉴 UI(지금은 BuildingHotbar 숫자키뿐).
 - 성능·편의(P2): W7 · W8 · W10 · W17. (W15는 해당 없음)
 - README 없음 — 포트폴리오용 README 작성 고려.
 
 ### 검증 방법 (Unity 없이 컴파일 확인)
 - Unity 설치본의 Roslyn으로 직접 컴파일했다:
   `<Unity>/Editor/Data/NetCoreRuntime/dotnet.exe <Unity>/Editor/Data/DotNetSdkRoslyn/csc.dll`
-  참조: `NetStandard/ref/2.1.0/netstandard.dll`, `Managed/UnityEngine/*.dll`(+UnityEditor), 옵션 `-define:UNITY_EDITOR -nowarn:0169,0649,0414`.
+  참조: `NetStandard/ref/2.1.0/netstandard.dll`, `Managed/UnityEngine/*.dll`(UnityEditor.CoreModule이 여기 있으므로 `Managed/UnityEditor.dll`을 함께 넣으면 CS0433. 이 PC의 Unity 경로는 `E:/Unity/2022.3.62f3`), 옵션 `-define:UNITY_EDITOR -nowarn:0169,0649,0414`.
   UGUI·TMP는 DLL이 패키지 캐시(Library)에 있어 읽지 않으므로 `TMP_Text`·`Slider`·`Button` 스텁 파일을 따로 만들어 넣었다.
 - 스크립트·스텁·테스트는 세션 임시 폴더에만 있었다(저장소에 없음). 다른 PC에서는 Unity 설치 경로에 맞춰 다시 만든다.
 - 순수 로직 테스트: Inventory 19개, CSV 파서 7개 — 모두 통과(2026-11-21).
@@ -157,6 +159,7 @@
 | 2026-11-21 | `docs/code-sync-check-2026-11-21.md` | 최신화된 스크립트와 문서 비교, 수정 필요 항목 정리 |
 | 2026-11-21 | `docs/bugfix-2026-11-21.md` | 컴파일 에러 제거, B1~B13 전부 + 경고 다수 수정, 51 → 36 파일 (커밋 `14c6ace5`) |
 | 2026-11-22 | `docs/docs-2026-11-22.md` | CLAUDE.md 전면 정리, 리뷰 문서 `새 폴더/` → `docs/` 이동, 수정 기록 규칙(0절) 도입 |
+| 2026-11-22 | `docs/bugfix-2026-11-22.md` | 씬 구성 점검: BuildingHotbar 추가(배치 진입점), 게임 씬 이름 MainScene + 사전 검사, 청크 Ground 레이어 자동 지정, Placer 마스크·카메라 방어, 씬 구성안 |
 
 ---
 

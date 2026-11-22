@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 /// <summary>새 게임 → WorldPreGenerator → 게임 씬 전환. 실패하면 이유와 재시도 방법을 보여 준다.</summary>
 public class LoadingSceneController : MonoBehaviour
 {
-    [SerializeField] private string              _gameSceneName = "GameScene";
+    [SerializeField] private string              _gameSceneName = "MainScene";
     [SerializeField] private WorldPreGenerator   _generator;
     [SerializeField] private LoadingUIController _ui;
     [SerializeField] private int                 _saveSlot = 0;
@@ -23,6 +23,17 @@ public class LoadingSceneController : MonoBehaviour
         if (_generator == null || _ui == null)
         {
             Debug.LogError("[LoadingSceneController] _generator 또는 _ui가 연결되지 않았습니다.", this);
+            return;
+        }
+
+        // 씬 이름이 틀리거나 Build Settings에 없으면 맵을 다 만든 뒤에야 LoadScene에서 실패한다 — 시작 전에 알린다
+        // 설정 오류라 재시도(= 새 게임으로 덮어쓰기)로는 고쳐지지 않는다. Fail()을 쓰면 세이브만 날아가므로 알리기만 한다.
+        if (!Application.CanStreamedLevelBeLoaded(_gameSceneName))
+        {
+            string message = $"게임 씬 '{_gameSceneName}'을(를) 불러올 수 없습니다.\n" +
+                             "씬 이름과 File › Build Settings의 씬 목록을 확인하세요.";
+            Debug.LogError($"[LoadingSceneController] {message}", this);
+            _ui.SetStatus(message);
             return;
         }
 
