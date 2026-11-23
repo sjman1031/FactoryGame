@@ -7,10 +7,12 @@ using System.Collections.Generic;
 /// </summary>
 public static class ChunkGenerator
 {
-    private const float FLAT_RADIUS_SQR       = 30f * 30f;  // [최적화] sqrt 제거 → sqrMagnitude 비교
-    private const float TRANSITION_RADIUS_SQR = 50f * 50f;
-    private const float FLAT_RADIUS           = 30f;        // Lerp 계산에만 사용
-    private const float TRANSITION_RADIUS     = 50f;
+    private const float FLAT_RADIUS_SQR       = FLAT_RADIUS * FLAT_RADIUS;  // [최적화] sqrt 제거 → sqrMagnitude 비교
+    private const float TRANSITION_RADIUS_SQR = TRANSITION_RADIUS * TRANSITION_RADIUS;
+    /// <summary>평지 존 반지름. 이 안은 높이 0. (TerrainPreview 기즈모도 이 값을 쓴다)</summary>
+    public  const float FLAT_RADIUS           = 30f;
+    /// <summary>전이 구간 바깥 반지름. FLAT_RADIUS와 이 값 사이에서 지형이 서서히 솟는다.</summary>
+    public  const float TRANSITION_RADIUS     = 50f;
 
     private static float     _seed       = 0f;
     private static Vector2   _flatCenter = Vector2.zero;

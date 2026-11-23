@@ -33,7 +33,7 @@
 - UI: UGUI(`Slider`, `Button`) + TextMeshPro(`TMP_Text`).
 - 입력: 구 Input Manager(`Input.GetAxis`/`GetButtonDown`).
 
-## 3. 폴더와 파일 (Assets/Scripts, 37개 — 2026-11-22 기준)
+## 3. 폴더와 파일 (Assets/Scripts, 39개 — 2026-11-23 기준)
 | 폴더 | 파일 |
 |---|---|
 | Core | GameBootstrapper, SingletonManager, TickManager, Inventory, TaskExtensions |
@@ -45,11 +45,12 @@
 | UI | LoadingSceneController, LoadingUIController |
 | Loading | LoadingContext |
 | Editor | DataImporter |
+| Preview | TerrainPreview, PreviewFlyCamera (지형 생성 미리보기 — 세이브 안 거침, `docs/feature-2026-11-23.md`) |
 
 그 밖의 자산:
 - `Assets/Data/CSV/` — items(17행) · recipes(12행) · resource_nodes(5행). UTF-8 BOM, `#` 주석 줄 있음.
 - `Assets/Data/ScriptableObjects/` — Items 17 · Recipes 12 · ResourceNodes 5. **아직 이전 필드명(nodeID, craftingTime)으로 저장돼 있음** → `FormerlySerializedAs`로 읽힘. 전체 임포트하면 새 이름으로 갱신된다.
-- `Assets/Scenes/` — LoadingScene, MainScene. **스크립트가 하나도 붙어 있지 않다(S4).** Build Settings 씬 목록도 비어 있다. 구성안은 `docs/bugfix-2026-11-22.md` 4절.
+- `Assets/Scenes/` — LoadingScene, MainScene, TerrainPreviewScene. 구성안은 `docs/bugfix-2026-11-22.md` 4절(S4), 미리보기 씬은 `docs/feature-2026-11-23.md` 5절. 사용자가 에디터에서 구성 중(2026-11-23 커밋). **Build Settings에 MainScene만 있고 LoadingScene(0)이 빠져 있음** → 빌드하면 SaveSystem 없이 MainScene부터 시작한다. LoadingScene(0) · MainScene(1)로 고쳐야 함.
 - `Assets/Prefabs/` 없음. `Assets/Resources/GameDatabase.asset` 없음(전체 임포트로 생성).
 - `docs/` — 4절 "문서 목록" 참고.
 
@@ -61,6 +62,7 @@
 | `bugfix-2026-11-21.md` | 위 두 문서 기준 버그 수정 전체 기록 (수정 내역, 바뀐 API, 에디터 할 일, 고치지 않은 것) |
 | `docs-2026-11-22.md` | CLAUDE.md 전면 정리, 리뷰 문서 이동, 수정 기록 규칙 도입 |
 | `bugfix-2026-11-22.md` | 씬 구성 점검: 배치 입력(BuildingHotbar), 게임 씬 이름, Ground 레이어 수정 + **씬·프리팹 구성안(S4)** |
+| `feature-2026-11-23.md` | 지형 생성 미리보기(TerrainPreview, PreviewFlyCamera) + **미리보기 씬 구성안** |
 
 우선순위는 리뷰 로드맵을 따르되, 이미 처리된 항목은 `bugfix-2026-11-21.md` 기준으로 판단한다.
 
@@ -117,7 +119,7 @@
 - 2026-11-21 리뷰 확정 버그 B1~B13 **전부 수정**. 자세한 내용은 `docs/bugfix-2026-11-21.md`.
 - 리뷰가 제안한 해법이 이 Unity 버전에서 안 될 수 있다(Awaitable). 제안을 적용하기 전에 버전부터 확인한다.
 
-## 9. 현재 상태와 할 일 (2026-11-22)
+## 9. 현재 상태와 할 일 (2026-11-23)
 
 ### 사용자가 Unity 에디터에서 할 일 (아직 안 함)
 1. Unity를 열어 컴파일 확인. `.meta` 11개(BuildingCatalog, ManufacturerBuilding, ResourceNodeBehaviour, TaskExtensions, GameDatabase, PlayerStateManager, LiveData, SaveController, ChunkData, ChunkUtils, OreTable)는 **생성·커밋 완료(2026-11-22)**. 새 `BuildingHotbar.cs.meta`는 다음에 Unity를 열 때 생긴다 → 커밋해야 다른 PC에서 GUID가 같다.
@@ -125,6 +127,7 @@
 3. Tags & Layers에 `Ground`, `Building` 레이어 추가.
 4. 씬·프리팹 구성(S4): `docs/bugfix-2026-11-22.md` 4절 구성안대로. Build Settings에 LoadingScene(0) · MainScene(1) 등록. Play는 항상 LoadingScene에서 시작.
 5. 구성 후 Play 모드 체크리스트: `docs/bugfix-2026-11-21.md` 5절. 건물 배치는 숫자키 1~4(BuildingHotbar), R 회전, Esc 취소.
+6. 지형 미리보기: `Assets/Scenes/TerrainPreviewScene.unity`를 열고 Play(세이브 불필요). 구성은 `docs/feature-2026-11-23.md` 5절. `Preview/` .meta 3개는 커밋 완료.
 
 ### 사용자 결정 대기 (구조 변경 — 먼저 묻고 진행)
 | ID | 내용 | 선택지 |
@@ -160,6 +163,7 @@
 | 2026-11-21 | `docs/bugfix-2026-11-21.md` | 컴파일 에러 제거, B1~B13 전부 + 경고 다수 수정, 51 → 36 파일 (커밋 `14c6ace5`) |
 | 2026-11-22 | `docs/docs-2026-11-22.md` | CLAUDE.md 전면 정리, 리뷰 문서 `새 폴더/` → `docs/` 이동, 수정 기록 규칙(0절) 도입 |
 | 2026-11-22 | `docs/bugfix-2026-11-22.md` | 씬 구성 점검: BuildingHotbar 추가(배치 진입점), 게임 씬 이름 MainScene + 사전 검사, 청크 Ground 레이어 자동 지정, Placer 마스크·카메라 방어, 씬 구성안 |
+| 2026-11-23 | `docs/feature-2026-11-23.md` | 지형 생성 미리보기 추가(게임 생성 코드 그대로 사용, 높이·광맥 색칠, 솟아오르는 연출). WorldPreGenerator.SpawnPoint·BuildCoordList, ChunkGenerator.FLAT_RADIUS·TRANSITION_RADIUS 공개 |
 
 ---
 

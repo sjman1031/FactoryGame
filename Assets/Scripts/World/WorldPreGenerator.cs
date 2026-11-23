@@ -22,11 +22,7 @@ public class WorldPreGenerator : MonoBehaviour
     {
         IsCompleted = false; IsFailed = false; Progress = 0f;
 
-        // 맵 중앙 청크의 한가운데 — 평지 존의 중심이자 플레이어 시작점.
-        // 청크 모서리가 아니라 가운데라서 청크 경계에 걸치지 않는다.
-        var center = new Vector2Int(_mapWidth / 2, _mapHeight / 2);
-        var spawn  = ChunkUtils.ChunkToWorld(center)
-                   + new Vector3(ChunkUtils.CHUNK_SIZE / 2, 0f, ChunkUtils.CHUNK_SIZE / 2);
+        var spawn = SpawnPoint(_mapWidth, _mapHeight);
 
         ChunkGenerator.SetSeed(seed);
         ChunkGenerator.SetFlatCenter(new Vector2(spawn.x, spawn.z));
@@ -87,7 +83,20 @@ public class WorldPreGenerator : MonoBehaviour
         if (!IsCompleted) SaveSystem.AbortWorldWrite();
     }
 
-    private List<Vector2Int> BuildCoordList(int w, int h)
+    /// <summary>
+    /// 맵 중앙 청크의 한가운데 — 평지 존의 중심이자 플레이어 시작점.
+    /// 청크 모서리가 아니라 가운데라서 청크 경계에 걸치지 않는다.
+    /// (TerrainPreview도 이 값을 써서 게임과 같은 지형을 만든다)
+    /// </summary>
+    public static Vector3 SpawnPoint(int mapWidth, int mapHeight)
+    {
+        var center = new Vector2Int(mapWidth / 2, mapHeight / 2);
+        return ChunkUtils.ChunkToWorld(center)
+             + new Vector3(ChunkUtils.CHUNK_SIZE / 2, 0f, ChunkUtils.CHUNK_SIZE / 2);
+    }
+
+    /// <summary>맵의 모든 청크 좌표를 중앙에서 가까운 순서로 돌려준다 (생성 순서).</summary>
+    public static List<Vector2Int> BuildCoordList(int w, int h)
     {
         var center = new Vector2Int(w / 2, h / 2);
         var list   = new List<Vector2Int>(w * h);
